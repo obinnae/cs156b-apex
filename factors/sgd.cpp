@@ -3,14 +3,34 @@
 
 DataAccessor d = new DataAccessor();
 
-float * gradient(const float y, 
-                 const float ** u,
+void gradientDescent(float ** u,
+                     float ** v, 
+                     const int factor_length,
+                     const int num_users,
+                     const int num_movies,
+                     float lambda){
+
+    /* 
+     * Randomly select an index from the file
+     * Get the corresponding u and v row cols
+     * pass as arguments to the gradient() func
+     * adjust the selected column/row accordingly
+     */
+
+    float gradient_u [] = gradient(u, v, index_u, u);
+}
+float * gradient(const float ** u,
                  const float ** v, 
                  const int index, 
                  const int factor_length,
                  const int non_factor_width,
                  float lambda,
                  bool isU){
+
+    /*
+     * TODO: Change definition from Coordinate Gradient Descent
+     * to Stochastic Gradient Descent. Will require signature change
+     */
 
     float ** factor;
     float ** non_factor;
