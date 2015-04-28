@@ -49,12 +49,12 @@ float * gradient(const float * const * u,
 
     float error = rating - baseline_rating; // Subtracting baseline from y here
     for (int i = 0; i < factor_length; i++){
-        error -= u[u_index][i] + v[i][v_index];
+        error -= u[u_index][i] + v[v_index][i];
     }
 
     if (isU) {
     	for (int i = 0; i < factor_length; i++){
-    		dot_prods[i] += (non_factor[i][v_index] * error);
+    		dot_prods[i] += (non_factor[v_index][i] * error);
     	}
     }
     else {
@@ -69,7 +69,7 @@ float * gradient(const float * const * u,
     }
     else {
     	for (int i = 0; i < factor_length; i++){
-    		factor_gradient[i] = (lambda * factor[i][v_index]) - dot_prods[i];
+    		factor_gradient[i] = (lambda * factor[v_index][i]) - dot_prods[i];
     	}
     }
     return factor_gradient;

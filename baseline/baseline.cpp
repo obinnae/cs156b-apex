@@ -45,6 +45,7 @@ float Baseline::get_baseline(int user_id, int movie_id) {
     std::cout << "Invalid (user_id, movie_id) pair: (" << user_id << ", " << movie_id << ")\n";
     return 0;
   }
+//  std::cout << "Accessing baseline for (" << user_id << ", " << movie_id << ")\n";
   
   if (!calculated_user_avg[user_id])
     compute_user_average(user_id);
@@ -73,7 +74,7 @@ void Baseline::compute_user_average(int user_id) {
   
   delete[] entries;
   
-  std::cout << "Average for user " << (user_id+1) << " is " << user_avgs[user_id] << std::endl;
+//  std::cout << "Average for user " << user_id << " is " << user_avgs[user_id] << std::endl;
 }
 void Baseline::compute_movie_average(int movie_id) {
   entry_t *entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
@@ -86,7 +87,7 @@ void Baseline::compute_movie_average(int movie_id) {
   
   delete[] entries;
   
-  std::cout << "Average for movie " << (movie_id+1) << " is " << movie_avgs[movie_id] << std::endl;
+//  std::cout << "Average for movie " << movie_id << " is " << movie_avgs[movie_id] << std::endl;
 }
 float Baseline::calc_average_rating(entry_t *entries, int num_entries) {
   int rating;
