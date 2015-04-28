@@ -56,6 +56,8 @@
 #define NUM_MOVIES 17770
 #define NUM_RATINGS 6
 #define NUM_DATES 2243
+#define MAX_ENTRIES_PER_USER 3496
+#define MAX_ENTRIES_PER_MOVIE 242126
 
 typedef std::pair<int, int> entry_t;
 

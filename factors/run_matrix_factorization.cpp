@@ -106,3 +106,29 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, int iterati
 	}
 }
 
+int main(int argc, char *argv[]) {
+  char *data_path;
+  int num_factors, num_iters;
+  float lambda, lrate;
+
+  if (argc != 6) {
+    std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate>\n";
+    exit(1);
+  }
+  data_path = argv[1];
+  num_factors = atoi(argv[2]);
+  num_iters = atoi(argv[3]);
+  lambda = atof(argv[4]);
+  lrate = atof(argv[5]);
+
+  std::cout << "Running matrix factorization with the following parameters:\n"
+      << "\tData file: " << data_path
+      << "\tNumber of factors: " << num_factors
+      << "\tNumber of iterations: " << num_iters
+      << "\tLambda: " << lambda
+      << "\tLearning rate: " << lrate << std::endl; 
+
+  run_matrix_factorization(num_factors, data_path, num_iters, lambda, lrate);
+
+  std::cout << "\nMatrix factorization finished!\n";
+}
