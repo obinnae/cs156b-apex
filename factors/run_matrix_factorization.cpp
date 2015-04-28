@@ -41,13 +41,13 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 */
 
 }
-void update_latent_factors(float ** U, float ** V, DataAccessor * d, int factors, int iterations, float lambda, float lrate) {
+void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int iterations, float lambda, float lrate) {
 	bool isU;
 	int index;
 	int movie_id, user_id;
 	float *step;
 	entry_t e;
-
+	
 	//Loop for the chosen number of iterations
 	for(int k = 0; k < iterations; k++) {
 
@@ -63,8 +63,10 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, int factors
     user_id = d->extract_user_id(e);
     movie_id = d->extract_movie_id(e);
 
+//    std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
+
 		// calculate a gradient step (using Obi's code in sgd.cpp)
-		step = gradient(U, V, index, d, factors,lambda, isU);
+		step = gradient(U, V, index, d, b, factors,lambda, isU);
 
 		// take a gradient step
 		if(isU)
@@ -80,7 +82,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, int factors
 		
 		delete[] step;
 
-    if (k % 250 == 0) {
+    if (k % 100000 == 0) {
 			double avg_change = 0;
 			for (int i = 0; i < factors; i++, avg_change += lrate*step[i]/factors) {}
 			std::cout << "Iteration " << k
@@ -94,11 +96,11 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, int factors
 	std::cout << std::endl;
 }
 
-float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d) {
+float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b) {
   float error = 0;
   int num_test_pts = 0;
   
-  Baseline b(d);
+  std::cout << "Calculating E_in...\n";
   
   entry_t e;
   int user_id, movie_id, rating;
@@ -116,12 +118,16 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       for (int j = 0; j < num_factors; j++) {
         rating_error += U[user_id][j] * V[movie_id][j];
       }
-      rating_error -= rating - b.get_baseline(user_id, movie_id);
+      rating_error -= rating - b->get_baseline(user_id, movie_id);
       error += rating_error * rating_error;
       
       // Increment number of test points
       num_test_pts++;
     }
+    
+    if (i % 1000000 == 0)
+      std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
+    
   }
   
   return sqrt(error / num_test_pts);
@@ -135,6 +141,8 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 	DataAccessor d;
 	d.load_data(data_path);
+	
+	Baseline b(&d);
 	
 	int num_users = d.get_num_users();
 	int num_movies = d.get_num_movies();
@@ -156,8 +164,8 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 	initialize_latent_factors(factors, U, V, num_users, num_movies);
 
-	update_latent_factors(U, V, &d, factors, iterations, lambda, lrate);
-
+	update_latent_factors(U, V, &d, &b, factors, iterations, lambda, lrate);
+/*
   std::cout << "U = [";
   for (int i = 0; i < num_users; i++) {
     for (int j = 0; j < factors; j++) {
@@ -172,10 +180,10 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
     }
     std::cout << ";\n";
   }
-  std::cout << "]\n";
+  std::cout << "]\n";*/
     
   // Calculate in-sample error
-  float error = calc_in_sample_error(U, V, factors, &d);
+  float error = calc_in_sample_error(U, V, factors, &d, &b);
     
   std::cout << "RMSE (in sample): " << error << std::endl;
 

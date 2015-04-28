@@ -9,6 +9,7 @@ float * gradient(const float * const * u,
                  const float * const * v, 
                  const int index,
                  const DataAccessor * d,
+                 Baseline *b,
                  const int factor_length,
                  float lambda,
                  bool isU){
@@ -18,15 +19,13 @@ float * gradient(const float * const * u,
      * to Stochastic Gradient Descent. Will require signature change
      */
 
-    Baseline b(d);
-
     entry_t e = d->get_entry(index);
     int u_index = d->extract_user_id(e);
     int v_index = d->extract_movie_id(e);
     float rating = (float) d->extract_rating(e);
     //Would rather use a single entry_t object above and discard after this step
 
-    float baseline_rating = (float) b.get_baseline(u_index, v_index);
+    float baseline_rating = (float) b->get_baseline(u_index, v_index);
 
     const float * const * factor;
     const float * const * non_factor;

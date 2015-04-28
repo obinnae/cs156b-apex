@@ -229,7 +229,7 @@ int DataAccessor::user_id_from_entry_index(int index) const {
   // binary search to find user id corresponding to given entry index
   int min_id = 0;
   int max_id = num_users-1;
-  int id = index * num_users / num_entries;
+  int id = (int)((long)index * num_users / num_entries);
   while (min_id < max_id) {
     if (user_start_indices[id] <= index &&
         (id == num_users-1 || user_start_indices[id + 1] > index)) { // user_id is correct
@@ -241,6 +241,7 @@ int DataAccessor::user_id_from_entry_index(int index) const {
     }
     
     id = (min_id + max_id) / 2;
+    
   }
   
   return id;
