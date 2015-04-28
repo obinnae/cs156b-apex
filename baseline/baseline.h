@@ -34,10 +34,10 @@
 
 class Baseline {
 // private member variables
-  DataAccessor *data;
+  const DataAccessor *data;
   
-  bool calculated_user_avg[NUM_USERS];
-  bool calculated_movie_avg[NUM_MOVIES];
+  bool calculated_user_avg[MAX_USERS];
+  bool calculated_movie_avg[MAX_MOVIES];
 
   float *user_avgs;
   float *movie_avgs;
@@ -48,7 +48,7 @@ public:
   // Constructs a Baseline object for the given DataAccessor object.
   // If d is not supplied, then you should call set_data() before
   // attempted to calculate baselines.
-  Baseline(DataAccessor *d = NULL);
+  Baseline(const DataAccessor *d = NULL);
   
   // destructor
   ~Baseline();
@@ -57,7 +57,7 @@ public:
   
   // Sets the associated DataAccessor object. This can be done at any time.
   // This removes all stored user/movie averages.
-  void set_data(DataAccessor *d);
+  void set_data(const DataAccessor *d);
   
   // Returns the baseline rating for the given user_id and movie_id.
   // The baseline is the average of the means for the user and movie.

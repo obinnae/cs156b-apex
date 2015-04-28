@@ -7,12 +7,15 @@
 // If d is not supplied, then you should call set_data() before
 // attempted to calculate baselines.
 // Default value for d is NULL.
-Baseline::Baseline(DataAccessor *d) {
-  data = d;
+Baseline::Baseline(const DataAccessor *d) {
+  // Allocate dummy space for the arrays
+  // This is just so set_data can delete them and replace them with the proper sizes
 
-  // Allocate space for precomputed user and movie averages
-  user_avgs = new float[NUM_USERS];
-  movie_avgs = new float[NUM_MOVIES];
+  // Allocate space for precomputed user and movie averages    
+  user_avgs = new float[MAX_USERS];
+  movie_avgs = new float[MAX_MOVIES];
+
+  set_data(d);
 }
 
 // destructor
@@ -24,7 +27,7 @@ Baseline::~Baseline() {
 
 // Sets the associated DataAccessor object. This can be done at any time.
 // This removes all stored user/movie averages.
-void Baseline::set_data(DataAccessor *d) {
+void Baseline::set_data(const DataAccessor *d) {
   data = d;
   
   clear_averages();
@@ -40,6 +43,13 @@ float Baseline::get_baseline(int user_id, int movie_id) {
     std::cout << "You must use set_data() to supply a DataAccessor object before requesting baselines!\n";
     return 0;
   }
+  if (user_id < 0 || user_id >= data->get_num_users()
+      || movie_id < 0 || movie_id >= data->get_num_movies()) {
+    std::cout << "Number of users: " << data->get_num_users() << "\nNumber of movies: " << data->get_num_movies() << std::endl;
+    std::cout << "Invalid (user_id, movie_id) pair: (" << user_id << ", " << movie_id << ")\n";
+    return 0;
+  }
+//  std::cout << "Accessing baseline for (" << user_id << ", " << movie_id << ")\n";
   
   if (!calculated_user_avg[user_id])
     compute_user_average(user_id);
@@ -68,7 +78,7 @@ void Baseline::compute_user_average(int user_id) {
   
   delete[] entries;
   
-  std::cout << "Average for user " << (user_id+1) << " is " << user_avgs[user_id] << std::endl;
+//  std::cout << "Average for user " << user_id << " is " << user_avgs[user_id] << std::endl;
 }
 void Baseline::compute_movie_average(int movie_id) {
   entry_t *entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
@@ -81,7 +91,7 @@ void Baseline::compute_movie_average(int movie_id) {
   
   delete[] entries;
   
-  std::cout << "Average for movie " << (movie_id+1) << " is " << movie_avgs[movie_id] << std::endl;
+//  std::cout << "Average for movie " << movie_id << " is " << movie_avgs[movie_id] << std::endl;
 }
 float Baseline::calc_average_rating(entry_t *entries, int num_entries) {
   int rating;
@@ -110,8 +120,8 @@ float Baseline::calc_average_rating(entry_t *entries, int num_entries) {
 // to the new data set.
 void Baseline::clear_averages() {
   // Reset all flags to indicate no averages are currently precomputed
-  for (int i = 0; i < NUM_USERS; i++) calculated_user_avg[i] = false;
-  for (int i = 0; i < NUM_MOVIES; i++) calculated_movie_avg[i] = false;
+  for (int i = 0; i < MAX_USERS; i++) calculated_user_avg[i] = false;
+  for (int i = 0; i < MAX_MOVIES; i++) calculated_movie_avg[i] = false;
   
   // It is not necessary to clear the values in the user_avgs/movie_avgs arrays
   // because they will not be used since the flags are reset.
