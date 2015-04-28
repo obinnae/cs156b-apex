@@ -80,49 +80,49 @@ public:
   void load_data(char *datafile); // load data from file into memory for quick access
   
   // Access loaded data
-  int get_num_entries();
+  int get_num_entries() const;
   
-  bool has_entry(int user_id, int movie_id);
+  bool has_entry(int user_id, int movie_id) const;
   
   // Get the rating entry associated with the (user_id, movie_id) pair
-  entry_t get_entry(int user_id, int movie_id);
+  entry_t get_entry(int user_id, int movie_id) const;
   
   // Get the index-th entry, in user-sorted-first order
-  entry_t get_entry(int index);
+  entry_t get_entry(int index) const;
   
   // Get all entries associated with the given user_id.
   // Entries are returned in the user_entries array.
   // Return value is number of entries associated with the user.
-  int get_user_entries(int user_id, entry_t *user_entries);
+  int get_user_entries(int user_id, entry_t *user_entries) const;
   
   // Get all entries associated with the given movie_id.
   // Entries are returned in the movie_entries array.
   // Return value is number of entries associated with the movie.
-  int get_movie_entries(int movie_id, entry_t *movie_entries);
+  int get_movie_entries(int movie_id, entry_t *movie_entries) const;
   
   // Get rating information from an entry_t object
-  int extract_user_id(entry_t entry);
-  int extract_movie_id(entry_t entry);
-  int extract_rating(entry_t entry);
-  int extract_date(entry_t entry);
-  void extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date);
+  int extract_user_id(entry_t entry) const;
+  int extract_movie_id(entry_t entry) const;
+  int extract_rating(entry_t entry) const;
+  int extract_date(entry_t entry) const;
+  void extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const;
   
   
 private:
   // Retrieves the entry value of the desired entry
-  int find_entry_val(int user_id, int movie_id);
+  int find_entry_val(int user_id, int movie_id) const;
   
   // Extract data from a compressed 4-byte entry value holding movie id, rating, and date.
-  int movie_id_from_entry_val(int entry_val);
-  int rating_from_entry_val(int entry_val);
-  int date_from_entry_val(int entry_val);
-  void parse_entry_val(int entry_val, int &movie_id, int &rating, int &date);
+  int movie_id_from_entry_val(int entry_val) const;
+  int rating_from_entry_val(int entry_val) const;
+  int date_from_entry_val(int entry_val) const;
+  void parse_entry_val(int entry_val, int &movie_id, int &rating, int &date) const;
   
   // Package entry value into entry_t datatype
-  entry_t make_entry_t(int user_id, int entry_val);
+  entry_t make_entry_t(int user_id, int entry_val) const;
   
   // Get user id for given entry index
-  int user_id_from_entry_index(int index);
+  int user_id_from_entry_index(int index) const;
 
   // Calculate movie-sorted information (for faster access)
   void calc_movie_info();

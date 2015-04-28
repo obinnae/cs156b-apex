@@ -7,7 +7,7 @@
 // If d is not supplied, then you should call set_data() before
 // attempted to calculate baselines.
 // Default value for d is NULL.
-Baseline::Baseline(DataAccessor *d) {
+Baseline::Baseline(const DataAccessor *d) {
   data = d;
 
   // Allocate space for precomputed user and movie averages
@@ -24,7 +24,7 @@ Baseline::~Baseline() {
 
 // Sets the associated DataAccessor object. This can be done at any time.
 // This removes all stored user/movie averages.
-void Baseline::set_data(DataAccessor *d) {
+void Baseline::set_data(const DataAccessor *d) {
   data = d;
   
   clear_averages();

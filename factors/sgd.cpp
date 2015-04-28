@@ -5,8 +5,8 @@
 // DataAccessor d = new DataAccessor();
 
 
-float * gradient(const float ** u,
-                 const float ** v, 
+float * gradient(const float * const * u,
+                 const float * const * v, 
                  const int index,
                  const DataAccessor * d,
                  const int factor_length,
@@ -18,26 +18,27 @@ float * gradient(const float ** u,
      * to Stochastic Gradient Descent. Will require signature change
      */
 
-    Baseline b = new Baseline(d);
+    Baseline b(d);
 
-    int u_index = d.user_id_from_entry_index(index);
-    int v_index = d.extract_movie_id(get_entry(index));
-    float rating = (float) d.extract_rating(get_entry(index));
+    entry_t e = d->get_entry(index);
+    int u_index = d->extract_user_id(e);
+    int v_index = d->extract_movie_id(e);
+    float rating = (float) d->extract_rating(e);
     //Would rather use a single entry_t object above and discard after this step
 
     float baseline_rating = (float) b.get_baseline(u_index, v_index);
 
-    float ** factor;
-    float ** non_factor;
+    const float * const * factor;
+    const float * const * non_factor;
     float dot_prods[factor_length];
     std::fill( dot_prods, dot_prods + factor_length, 0 );
-    float factor_gradient [factor_length];
+    float *factor_gradient = new float[factor_length];
 
-    if isU{
+    if (isU) {
         factor = u;
         non_factor = v;
     }
-    else{
+    else {
         factor = v;
         non_factor = u;
     }
@@ -46,12 +47,12 @@ float * gradient(const float ** u,
          * from aproximating the rating using the factors
          */
 
-    float error = rating - b.baseline; // Subtracting baseline from y here
+    float error = rating - baseline_rating; // Subtracting baseline from y here
     for (int i = 0; i < factor_length; i++){
         error -= u[u_index][i] + v[i][v_index];
     }
 
-    if isU {
+    if (isU) {
     	for (int i = 0; i < factor_length; i++){
     		dot_prods[i] += (non_factor[i][v_index] * error);
     	}
@@ -61,7 +62,7 @@ float * gradient(const float ** u,
     		dot_prods[i] += (non_factor[u_index][i] * error);
     	}
     }
-    if isU {
+    if (isU) {
     	for (int i = 0; i < factor_length; i++){
     		factor_gradient[i] = (lambda * factor[u_index][i]) - dot_prods[i];
     	}
@@ -74,42 +75,43 @@ float * gradient(const float ** u,
     return factor_gradient;
 }
 
-float * coordinateGradient(const float ** u,
-						   const float ** v,
+float * coordinateGradient(const float * const * u,
+						   const float * const * v,
 						   const int index,
+               const DataAccessor * d,
 						   const int factor_length,
 						   const int non_factor_width,
 						   float lambda,
 						   bool isU){
 
 
-    float ** factor;
-    float ** non_factor;
+    const float * const * factor;
+    const float * const * non_factor;
     float dot_prods[factor_length];
     std::fill( dot_prods, dot_prods + factor_length, 0 );
-    float factor_gradient [factor_length];
+    float *factor_gradient = new float[factor_length];
 
-    if isU{
+    if (isU) {
         factor = u;
         non_factor = v;
     }
-    else{
+    else {
         factor = v;
         non_factor = u;
     }
 
-    for (int j = 0, j < non_factor_width, j++){ //Need to find a way to only iterate through available vals
+    for (int j = 0; j < non_factor_width; j++){ //Need to find a way to only iterate through available vals
 
         /*
          * Loop that follows calculates the error arrising
          * from aproximating the rating using the factors
          */
 
-        float error = d.get_entry(index, j);
+        float error = static_cast<float>(d->extract_rating(d->get_entry(index, j)));
         for (int i = 0; i < factor_length; i++){
             error -= u[index][i] + v[i][j];
         }
-        if isU {
+        if (isU) {
         	for (int i = 0; i < factor_length; i++){
         		dot_prods[i] += (non_factor[i][j] * error);
         	}
@@ -120,7 +122,7 @@ float * coordinateGradient(const float ** u,
         	}
         }
     }
-    if isU {
+    if (isU) {
     	for (int i = 0; i < factor_length; i++){
     		factor_gradient[i] = (lambda * factor[index][i]) - dot_prods[i];
     	}
