@@ -40,6 +40,11 @@ float Baseline::get_baseline(int user_id, int movie_id) {
     std::cout << "You must use set_data() to supply a DataAccessor object before requesting baselines!\n";
     return 0;
   }
+  if (user_id < 0 || user_id >= NUM_USERS
+      || movie_id < 0 || movie_id >= NUM_MOVIES) {
+    std::cout << "Invalid (user_id, movie_id) pair: (" << user_id << ", " << movie_id << ")\n";
+    return 0;
+  }
   
   if (!calculated_user_avg[user_id])
     compute_user_average(user_id);
