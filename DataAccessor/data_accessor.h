@@ -52,8 +52,8 @@
 #include <cstdlib>
 
 
-#define NUM_USERS 458293
-#define NUM_MOVIES 17770
+#define MAX_USERS 458293
+#define MAX_MOVIES 17770
 #define NUM_RATINGS 6
 #define NUM_DATES 2243
 #define MAX_ENTRIES_PER_USER 3496
@@ -63,6 +63,9 @@ typedef std::pair<int, int> entry_t;
 
 class DataAccessor {
 // private member variables
+  int num_users;
+  int num_movies;
+
   int num_entries;
   int *entries;
 
@@ -81,6 +84,8 @@ public:
   
   // Access loaded data
   int get_num_entries() const;
+  int get_num_users() const;
+  int get_num_movies() const;
   
   bool has_entry(int user_id, int movie_id) const;
   

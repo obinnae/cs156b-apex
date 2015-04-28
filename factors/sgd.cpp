@@ -30,51 +30,46 @@ float * gradient(const float * const * u,
 
     const float * const * factor;
     const float * const * non_factor;
-    float dot_prods[factor_length];
-    std::fill( dot_prods, dot_prods + factor_length, 0 );
+    int factor_i, nfactor_i;
+    float main_term[factor_length];
+    float regularization_term[factor_length];
     float *factor_gradient = new float[factor_length];
 
     if (isU) {
         factor = u;
         non_factor = v;
+        factor_i = u_index;
+        nfactor_i = v_index;
     }
     else {
         factor = v;
         non_factor = u;
+        factor_i = v_index;
+        nfactor_i = u_index;
     }
         /*
-         * Loop that follows calculates the error arrising
+         * Loop that follows calculates the error arising
          * from aproximating the rating using the factors
          */
 
     float error = rating - baseline_rating; // Subtracting baseline from y here
     for (int i = 0; i < factor_length; i++){
-        error -= u[u_index][i] + v[v_index][i];
+        error -= u[u_index][i] * v[v_index][i];
     }
 
-    if (isU) {
-    	for (int i = 0; i < factor_length; i++){
-    		dot_prods[i] += (non_factor[v_index][i] * error);
-    	}
+    for (int i = 0; i < factor_length; i++){
+    	main_term[i] = non_factor[nfactor_i][i] * error;
+    	regularization_term[i] = lambda * factor[factor_i][i] / d->get_num_entries();
     }
-    else {
-    	for (int i = 0; i < factor_length; i++){
-    		dot_prods[i] += (non_factor[u_index][i] * error);
-    	}
+    
+    for (int i = 0; i < factor_length; i++){
+  		factor_gradient[i] = regularization_term[i] - main_term[i];
     }
-    if (isU) {
-    	for (int i = 0; i < factor_length; i++){
-    		factor_gradient[i] = (lambda * factor[u_index][i]) - dot_prods[i];
-    	}
-    }
-    else {
-    	for (int i = 0; i < factor_length; i++){
-    		factor_gradient[i] = (lambda * factor[v_index][i]) - dot_prods[i];
-    	}
-    }
+    
     return factor_gradient;
 }
 
+// NEEDS SIGNIFICANT UPDATING.
 float * coordinateGradient(const float * const * u,
 						   const float * const * v,
 						   const int index,

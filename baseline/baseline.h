@@ -36,8 +36,8 @@ class Baseline {
 // private member variables
   const DataAccessor *data;
   
-  bool calculated_user_avg[NUM_USERS];
-  bool calculated_movie_avg[NUM_MOVIES];
+  bool calculated_user_avg[MAX_USERS];
+  bool calculated_movie_avg[MAX_MOVIES];
 
   float *user_avgs;
   float *movie_avgs;

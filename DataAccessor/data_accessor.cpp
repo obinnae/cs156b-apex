@@ -2,13 +2,15 @@
 
 DataAccessor::DataAccessor() {
   num_entries = 0;
+  num_users = 0;
+  num_movies = 0;
   
-  entries_per_user = new int[NUM_USERS];
-  user_start_indices = new int[NUM_USERS];
+  entries_per_user = new int[1];
+  user_start_indices = new int[1];
   entries = new int[1];
   
-  entries_per_movie = new int[NUM_MOVIES];
-  movie_start_indices = new int[NUM_MOVIES];
+  entries_per_movie = new int[1];
+  movie_start_indices = new int[1];
   movie_entry_indices = new int[1];
 }
 
@@ -28,18 +30,30 @@ void DataAccessor::load_data(char *datafile) {
   std::ifstream input(datafile);
   
   input.read(reinterpret_cast<char*>(&num_entries), sizeof(int));
-  input.read(reinterpret_cast<char*>(entries_per_user), NUM_USERS*sizeof(int));
-    
+  input.read(reinterpret_cast<char*>(&num_users), sizeof(int));
+  input.read(reinterpret_cast<char*>(&num_movies), sizeof(int));
+  
+  delete[] user_start_indices;
+  delete[] entries_per_user;
   delete[] entries;
+  user_start_indices = new int[num_users];
+  entries_per_user = new int[num_users];
   entries = new int[num_entries];
+  input.read(reinterpret_cast<char*>(entries_per_user), num_users*sizeof(int));
   input.read(reinterpret_cast<char*>(entries), num_entries*sizeof(int));
   
   user_start_indices[0] = 0;
-  for (int i = 1; i < NUM_USERS; i++) {
+  for (int i = 1; i < num_users; i++) {
     user_start_indices[i] = user_start_indices[i-1] + entries_per_user[i-1];
   }
   
   delete[] movie_entry_indices;
+  delete[] movie_start_indices;
+  delete[] entries_per_movie;
+  
+  movie_entry_indices = new int[num_entries];
+  movie_start_indices = new int[num_movies];
+  entries_per_movie = new int[num_movies];
   calc_movie_info();
 }
 
@@ -49,6 +63,14 @@ void DataAccessor::load_data(char *datafile) {
 // Returns the number of entries loaded from the file
 int DataAccessor::get_num_entries() const {
   return num_entries;
+}
+// Returns the number of users in the loaded data file
+int DataAccessor::get_num_users() const {
+  return num_users;
+}
+// Returns the number of movies in the loaded data file
+int DataAccessor::get_num_movies() const {
+  return num_movies;
 }
 
 // Returns true if the entry has been loaded and false otherwise.
@@ -152,8 +174,8 @@ int DataAccessor::find_entry_val(int user_id, int movie_id) const {
   int entry_val, entry_movie_id;
   
   min_index = user_start_indices[user_id];
-  max_index = (user_id<NUM_USERS-1) ? (user_start_indices[user_id + 1]-1) : (num_entries-1);
-  guess = movie_id * (max_index - min_index) / NUM_MOVIES + min_index;
+  max_index = (user_id<num_users-1) ? (user_start_indices[user_id + 1]-1) : (num_entries-1);
+  guess = movie_id * (max_index - min_index) / num_movies + min_index;
   while (min_index <= max_index) {
     
     entry_val = entries[guess];
@@ -167,7 +189,7 @@ int DataAccessor::find_entry_val(int user_id, int movie_id) const {
       return entry_val;
     }
     
-    guess = movie_id * (max_index - min_index) / NUM_MOVIES + min_index;
+    guess = movie_id * (max_index - min_index) / num_movies + min_index;
   }
   return -1; // movie rating not found
 }
@@ -175,22 +197,22 @@ int DataAccessor::find_entry_val(int user_id, int movie_id) const {
 
 // Extract movie, rating, and date information from a compressed 4-byte entry value.
 // The entry value is calculated with the formula
-//    E = (d*NUM_RATINGS + r)*NUM_MOVIES + m
+//    E = (d*NUM_RATINGS + r)*num_movies + m
 int DataAccessor::movie_id_from_entry_val(int entry_val) const {
-  return entry_val % NUM_MOVIES;
+  return entry_val % num_movies;
 }
 int DataAccessor::rating_from_entry_val(int entry_val) const {
-  int temp = entry_val / NUM_MOVIES;
+  int temp = entry_val / num_movies;
   return temp % NUM_RATINGS;
 }
 int DataAccessor::date_from_entry_val(int entry_val) const {
-  int temp = entry_val / NUM_MOVIES / NUM_RATINGS;
+  int temp = entry_val / num_movies / NUM_RATINGS;
   return temp + 1;
 } 
 void DataAccessor::parse_entry_val(int entry_val, int &movie_id, int &rating, int &date) const {
   int temp;
-  movie_id = entry_val % NUM_MOVIES;
-  temp = entry_val / NUM_MOVIES;
+  movie_id = entry_val % num_movies;
+  temp = entry_val / num_movies;
   
   rating = temp % NUM_RATINGS;
   date = temp / NUM_RATINGS + 1;
@@ -206,11 +228,11 @@ entry_t DataAccessor::make_entry_t(int user_id, int entry_val) const {
 int DataAccessor::user_id_from_entry_index(int index) const {
   // binary search to find user id corresponding to given entry index
   int min_id = 0;
-  int max_id = NUM_USERS-1;
-  int id = index * NUM_USERS / num_entries;
+  int max_id = num_users-1;
+  int id = index * num_users / num_entries;
   while (min_id < max_id) {
     if (user_start_indices[id] <= index &&
-        (id == NUM_USERS-1 || user_start_indices[id + 1] > index)) { // user_id is correct
+        (id == num_users-1 || user_start_indices[id + 1] > index)) { // user_id is correct
       break;
     } else if (user_start_indices[id] > index) { // user_id is too high
       max_id = id - 1;
@@ -227,21 +249,20 @@ int DataAccessor::user_id_from_entry_index(int index) const {
 // Calculate movie information for faster access with get_movie_ratings()
 // Only called by load_data() after populating user information arrays.
 void DataAccessor::calc_movie_info() {
-  int *entry_count_per_movie = new int[NUM_MOVIES];
+  int *entry_count_per_movie = new int[num_movies];
   
-  memset(entries_per_movie, 0, sizeof(int)*NUM_MOVIES);
+  memset(entries_per_movie, 0, sizeof(int)*num_movies);
   for (int i = 0; i < num_entries; i++) {
     entries_per_movie[movie_id_from_entry_val(entries[i])]++;
   }
   
   movie_start_indices[0] = 0;
-  for (int m = 1; m < NUM_MOVIES; m++) {
+  for (int m = 1; m < num_movies; m++) {
     movie_start_indices[m] = movie_start_indices[m-1] + entries_per_movie[m-1];
   }
   
-  movie_entry_indices = new int[num_entries];
-  memset(entry_count_per_movie, 0, sizeof(int)*NUM_MOVIES);
-  for (int u = 0; u < NUM_USERS; u++) {
+  memset(entry_count_per_movie, 0, sizeof(int)*num_movies);
+  for (int u = 0; u < num_users; u++) {
     for (int i = 0; i < entries_per_user[u]; i++) {
       int entry_index = user_start_indices[u] + i;
       int m = movie_id_from_entry_val(entries[entry_index]);

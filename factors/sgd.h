@@ -1,6 +1,7 @@
 #ifndef SGD_H_INCLUDED
 #define SGD_H_INCLUDED	
 
+#include <cstring>
 #include "../DataAccessor/data_accessor.h"
 
 float * gradient(const float * const * u,
