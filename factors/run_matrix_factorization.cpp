@@ -12,7 +12,7 @@
 #include "sgd.h"
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
-
+#include "../runMatrixFactorization.cpp"
 using namespace std;
 
 #define MAX_MOVIES 17770
@@ -133,7 +133,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   return sqrt(error / num_test_pts);
 }
 
-void run_matrix_factorization(int factors, char * data_path, int iterations, float lambda, float lrate)
+void run_matrix_factorization(int factors, char * data_path, int iterations, float lambda, float lrate, char * qualPath, char * outputPath)
 {
 	//declare the number of iterations of SGD you want to do
 	//int iterations = 10;
@@ -184,7 +184,9 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
     
   // Calculate in-sample error
   float error = calc_in_sample_error(U, V, factors, &d, &b);
-    
+  
+  //create qual submission
+  runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
   std::cout << "RMSE (in sample): " << error << std::endl;
 
 }
@@ -192,12 +194,12 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 
 int main(int argc, char *argv[]) {
-  char *data_path;
+    char *data_path, qualPath, outputPath;
   int num_factors, num_iters;
   float lambda, lrate;
-
-  if (argc != 6) {
-    std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate>\n";
+  
+  if (argc != 8){
+    std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate> <qual_path> <output-file-path>\n"
     exit(1);
   }
   data_path = argv[1];
@@ -205,6 +207,10 @@ int main(int argc, char *argv[]) {
   num_iters = atoi(argv[3]);
   lambda = atof(argv[4]);
   lrate = atof(argv[5]);
+  
+  qualPath = argv[6];
+  outputPath = argv[7];
+
 
   std::cout << "Running matrix factorization with the following parameters:\n"
       << "\tData file: " << data_path << std::endl
@@ -213,7 +219,8 @@ int main(int argc, char *argv[]) {
       << "\tLambda: " << lambda << std::endl
       << "\tLearning rate: " << lrate << std::endl; 
 
-  run_matrix_factorization(num_factors, data_path, num_iters, lambda, lrate);
+  run_matrix_factorization(num_factors, data_path, num_iters, lambda, lrate, qualPath, outputPath);
 
   std::cout << "\nMatrix factorization finished!\n";
+
 }
