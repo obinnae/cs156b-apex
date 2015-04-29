@@ -9,15 +9,15 @@ int *parseLine(string line){
     int sep1, sep2;
     sep1 = line.find_first_of(' ');
     sep2 = line.find_first_of(' ', sep1 + 1);
-    data[0] = atoi(line.substr(0, sep1).c_str());
-    data[1] = atoi(line.substr(sep1 + 1, sep2).c_str());
+    data[0] = atoi(line.substr(0, sep1).c_str()) - 1;
+    data[1] = atoi(line.substr(sep1 + 1, sep2).c_str()) - 1;
     return data;
 }
 
-double getResult(int *data, float **u, float **v, int k, Baseline *b){
+float  getResult(int *data, float **u, float **v, int k, Baseline *b){
     float sum = 0;
     for(int i = 0; i < k; i++){
-        sum += u[data[0]][i] * v[i][data[1]];
+        sum += u[data[0]][i] * v[data[1]][i];
     }
     sum += b->get_baseline(data[0], data[1]);
     return sum;
