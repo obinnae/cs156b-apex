@@ -12,7 +12,7 @@
 #include "sgd.h"
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
-#include "../runMatrixFactorization.cpp"
+#include "runMatrixFactorization.cpp"
 using namespace std;
 
 #define MAX_MOVIES 17770
