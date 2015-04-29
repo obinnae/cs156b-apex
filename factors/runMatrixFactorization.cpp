@@ -1,7 +1,7 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-#include "./baseline/baseline.h"
+#include "../baseline/baseline.h"
 using namespace std;
 
 int *parseLine(string line){
@@ -14,8 +14,8 @@ int *parseLine(string line){
     return data;
 }
 
-double getResult(int *data, double **u, double **v, int k, Baseline *b){
-    double sum = 0;
+double getResult(int *data, float **u, float **v, int k, Baseline *b){
+    float sum = 0;
     for(int i = 0; i < k; i++){
         sum += u[data[0]][i] * v[i][data[1]];
     }
@@ -24,7 +24,7 @@ double getResult(int *data, double **u, double **v, int k, Baseline *b){
 }
 
 
-void runMatrixFactorization(double ** u, double **v, int k, char * inputFile, char *outputFile, Baseline *b){
+void runMatrixFactorization(float ** u, float **v, int k, char * inputFile, char *outputFile, Baseline *b){
     ofstream outFile;
     ifstream inFile;
 
