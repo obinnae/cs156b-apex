@@ -1,7 +1,7 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
-#include "./baseline/baseline.h"
+#include "../baseline/baseline.h"
 using namespace std;
 
 int *parseLine(string line){
