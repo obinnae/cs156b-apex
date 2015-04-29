@@ -195,12 +195,12 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 
 int main(int argc, char *argv[]) {
-    char *data_path, qualPath, outputPath;
+    char *data_path, *qualPath, *outputPath;
   int num_factors, num_iters;
   float lambda, lrate;
   
   if (argc != 8){
-    std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate> <qual_path> <output-file-path>\n"
+      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate> <qual_path> <output-file-path>\n";
     exit(1);
   }
   data_path = argv[1];
