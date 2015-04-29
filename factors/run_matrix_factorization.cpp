@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "sgd.h"
+//#include "runMatrixFactorization.cpp"
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
@@ -125,7 +126,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       num_test_pts++;
     }
     
-    if (i % 1000000 == 0)
+    if (i % 10000000 == 0)
       std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
     
   }
@@ -184,6 +185,7 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
     
   // Calculate in-sample error
   float error = calc_in_sample_error(U, V, factors, &d, &b);
+  
     
   std::cout << "RMSE (in sample): " << error << std::endl;
 
@@ -216,4 +218,13 @@ int main(int argc, char *argv[]) {
   run_matrix_factorization(num_factors, data_path, num_iters, lambda, lrate);
 
   std::cout << "\nMatrix factorization finished!\n";
+  
+  // For qual calculation:
+  //   path to qual
+  //   U and V matrices
+  //   number of factors
+  //   pass in Baseline object pointer
+  //   pass in pointer to DataAccessor
+  //   path to output
+  
 }
