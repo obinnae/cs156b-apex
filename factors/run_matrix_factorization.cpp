@@ -41,57 +41,60 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 */
 
 }
-void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int iterations, float lambda, float lrate) {
+void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate) {
 	bool isU;
 	int index;
 	int movie_id, user_id;
 	float *step;
 	entry_t e;
 	
-	//Loop for the chosen number of iterations
-	for(int k = 0; k < iterations; k++) {
+	//Loop for the chosen number of epochs
+	for (int epoch = 0; epoch < epochs; epoch++) {
+	  for (int k = 0; k < d->get_num_entries(); k++) {
 
-		//randomly select U or V
-		isU = (rand() % 2) == 1;
+  		//randomly select U or V
+	  	isU = (rand() % 2) == 1;
+ 
+  		//randomly select one index i of matrix
+	  	do {
+    		index = rand() % d->get_num_entries();
+  	  	e = d->get_entry(index);
+  	  } while (d->extract_rating(e) == 0);
 
-		//randomly select one index i of matrix
-		do {
-  		index = rand() % d->get_num_entries();
-  		e = d->get_entry(index);
-  	} while (d->extract_rating(e) == 0);
+      user_id = d->extract_user_id(e);
+      movie_id = d->extract_movie_id(e);
 
-    user_id = d->extract_user_id(e);
-    movie_id = d->extract_movie_id(e);
+//      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
-//    std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
+  		// calculate a gradient step (using Obi's code in sgd.cpp)
+	  	step = gradient(U, V, index, d, b, factors,lambda, isU);
 
-		// calculate a gradient step (using Obi's code in sgd.cpp)
-		step = gradient(U, V, index, d, b, factors,lambda, isU);
-
-		// take a gradient step
-		if(isU)
-		{
-			for(int i = 0; i < factors; i++)
-				U[user_id][i] = U[user_id][i] - lrate * step[i];
-		}
-		else
-		{
-			for(int i = 0; i < factors; i++)
-				V[movie_id][i] = V[movie_id][i] - lrate * step[i];
-		}
+  		// take a gradient step
+	  	if(isU)
+	    {
+		    for(int i = 0; i < factors; i++)
+  				U[user_id][i] = U[user_id][i] - lrate * step[i];
+  		}
+  		else
+	  	{
+		  	for(int i = 0; i < factors; i++)
+			  	V[movie_id][i] = V[movie_id][i] - lrate * step[i];
+		  }
 		
-		delete[] step;
+	  	delete[] step;
 
-    if (k % 100000 == 0) {
-			double avg_change = 0;
-			for (int i = 0; i < factors; i++, avg_change += lrate*step[i]/factors) {}
-			std::cout << "Iteration " << k
-						<< ": Average change to " << (isU?"user ":"movie ")
-						<< (isU?d->extract_user_id(e):d->extract_movie_id(e))
-						<< " factors is " << avg_change << std::endl;
-			//std::cout << avg_change << " ";
-		}
+      if (k % 500000 == 0) {
+	  		double avg_change = 0;
+	  		for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
+		  	std::cout << "Iteration " << k
+		  				<< ": Average change to " << (isU?"user ":"movie ")
+		  				<< (isU?d->extract_user_id(e):d->extract_movie_id(e))
+		  				<< " factors is " << avg_change << std::endl;
+		  	//std::cout << avg_change << " ";
+		  }
 
+	  }
+	  std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
 	}
 	std::cout << std::endl;
 }
@@ -133,11 +136,10 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   return sqrt(error / num_test_pts);
 }
 
-void run_matrix_factorization(int factors, char * data_path, int iterations, float lambda, float lrate, char * qualPath, char * outputPath)
+void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath)
 {
-	//declare the number of iterations of SGD you want to do
-	//int iterations = 10;
-	//float lambda = 0.1;
+	// declare the number of epochs of SGD you want to do
+	// # epochs = # iters * # factors
 
 	DataAccessor d;
 	d.load_data(data_path);
@@ -164,7 +166,7 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 	initialize_latent_factors(factors, U, V, num_users, num_movies);
 
-	update_latent_factors(U, V, &d, &b, factors, iterations, lambda, lrate);
+	update_latent_factors(U, V, &d, &b, factors, epochs, lambda, lrate);
 /*
   std::cout << "U = [";
   for (int i = 0; i < num_users; i++) {
@@ -196,16 +198,17 @@ void run_matrix_factorization(int factors, char * data_path, int iterations, flo
 
 int main(int argc, char *argv[]) {
     char *data_path, *qualPath, *outputPath;
-  int num_factors, num_iters;
+  int num_factors;
+  int num_epochs;
   float lambda, lrate;
   
   if (argc != 8){
-      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-iters> <lambda> <learning-rate> <qual_path> <output-file-path>\n";
+      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-epochs> <lambda> <learning-rate> <qual_path> <output-file-path>\n";
     exit(1);
   }
   data_path = argv[1];
   num_factors = atoi(argv[2]);
-  num_iters = atoi(argv[3]);
+  num_epochs = atoi(argv[3]);
   lambda = atof(argv[4]);
   lrate = atof(argv[5]);
   
@@ -216,11 +219,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Running matrix factorization with the following parameters:\n"
       << "\tData file: " << data_path << std::endl
       << "\tNumber of factors: " << num_factors << std::endl
-      << "\tNumber of iterations: " << num_iters << std::endl
+      << "\tNumber of epochs: " << num_epochs << std::endl
       << "\tLambda: " << lambda << std::endl
       << "\tLearning rate: " << lrate << std::endl; 
 
-  run_matrix_factorization(num_factors, data_path, num_iters, lambda, lrate, qualPath, outputPath);
+  run_matrix_factorization(num_factors, data_path, num_epochs, lambda, lrate, qualPath, outputPath);
 
   std::cout << "\nMatrix factorization finished!\n";
   

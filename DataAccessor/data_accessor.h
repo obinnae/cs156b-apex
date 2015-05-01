@@ -59,6 +59,7 @@
 #define MAX_ENTRIES_PER_USER 3496
 #define MAX_ENTRIES_PER_MOVIE 242126
 
+//typedef char[6] entry_compressed_t;
 typedef std::pair<int, int> entry_t;
 
 class DataAccessor {
