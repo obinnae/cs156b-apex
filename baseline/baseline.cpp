@@ -30,7 +30,7 @@ Baseline::~Baseline() {
 
 // Sets the type of baseline to be computed. This can be performed at any time.
 // <type> must be one of BASELINE_STANDARD, BASELINE_ZERO, BASELINE_USER_AVG, or BASELINE_MOVIE_AVG
-void set_type(int t) {
+void Baseline::set_type(int t) {
   type = t;
 
   switch(t) {
@@ -42,15 +42,16 @@ void set_type(int t) {
       use_user_avg = false;
       use_movie_avg = false;
       break;
+    case BASELINE_USER_AVG:
+      use_user_avg = true;
+      use_movie_avg = false;
+      break;
     case BASELINE_MOVIE_AVG:
       use_user_avg = false;
       use_movie_avg = true;
       break;
-    case BASELINE_USER_AVG:
-      use_user_avg = true;
-      use_movie_avg = false;
-    case default:
-      std::cout << "Invalid base type given; assuming BASELINE_STANDARD.\n";
+    default:
+      std::cout << "Invalid baseline type given; assuming BASELINE_STANDARD.\n";
       set_type(BASELINE_STANDARD);
   }
 }
@@ -93,12 +94,17 @@ float Baseline::get_baseline(int user_id, int movie_id) {
   switch (type) {
     case BASELINE_STANDARD:
       baseline = (user_avgs[user_id] + movie_avgs[movie_id])/2;
+      break;
     case BASELINE_ZERO:
       baseline = 0;
+      break;
     case BASELINE_USER_AVG:
       baseline = user_avgs[user_id];
+      break;
     case BASELINE_MOVIE_AVG:
       baseline = movie_avgs[movie_id];
+      break;
+  }
 
   return baseline;
 }

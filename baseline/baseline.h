@@ -34,8 +34,8 @@
 
 #define BASELINE_STANDARD 0
 #define BASELINE_ZERO 1
-#define BASELINE_MOVIE_AVG 2
-#define BASELINE_USER_AVG 3
+#define BASELINE_USER_AVG 2
+#define BASELINE_MOVIE_AVG 3
 
 class Baseline {
 // private member variables
