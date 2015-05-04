@@ -32,9 +32,17 @@
 #include <iostream>
 #include "../DataAccessor/data_accessor.h"
 
+#define BASELINE_STANDARD 0
+#define BASELINE_ZERO 1
+#define BASELINE_MOVIE_AVG 2
+#define BASELINE_USER_AVG 3
+
 class Baseline {
 // private member variables
   const DataAccessor *data;
+  int type;
+  bool use_user_avg;
+  bool use_movie_avg;
   
   bool calculated_user_avg[MAX_USERS];
   bool calculated_movie_avg[MAX_MOVIES];
@@ -48,13 +56,17 @@ public:
   // Constructs a Baseline object for the given DataAccessor object.
   // If d is not supplied, then you should call set_data() before
   // attempted to calculate baselines.
-  Baseline(const DataAccessor *d = NULL);
+  Baseline(const DataAccessor *d = NULL, int type = BASELINE_STANDARD);
   
   // destructor
   ~Baseline();
   
   //// General usage
   
+  // Sets the type of baseline to be computed. This can be performed at any time.
+  // <type> must be one of BASELINE_STANDARD, BASELINE_ZERO, BASELINE_USER_AVG, or BASELINE_MOVIE_AVG
+  void set_type(int type);
+
   // Sets the associated DataAccessor object. This can be done at any time.
   // This removes all stored user/movie averages.
   void set_data(const DataAccessor *d);

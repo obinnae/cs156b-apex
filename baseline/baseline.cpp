@@ -7,13 +7,16 @@
 // If d is not supplied, then you should call set_data() before
 // attempted to calculate baselines.
 // Default value for d is NULL.
-Baseline::Baseline(const DataAccessor *d) {
+Baseline::Baseline(const DataAccessor *d, int t) {
   // Allocate dummy space for the arrays
   // This is just so set_data can delete them and replace them with the proper sizes
 
   // Allocate space for precomputed user and movie averages    
   user_avgs = new float[MAX_USERS];
   movie_avgs = new float[MAX_MOVIES];
+
+  // Set flags to indicate what information must be computed
+  set_type(t);
 
   set_data(d);
 }
@@ -22,6 +25,34 @@ Baseline::Baseline(const DataAccessor *d) {
 Baseline::~Baseline() {
   delete[] user_avgs;
   delete[] movie_avgs;
+}
+
+
+// Sets the type of baseline to be computed. This can be performed at any time.
+// <type> must be one of BASELINE_STANDARD, BASELINE_ZERO, BASELINE_USER_AVG, or BASELINE_MOVIE_AVG
+void set_type(int t) {
+  type = t;
+
+  switch(t) {
+    case BASELINE_STANDARD:
+      use_user_avg = true;
+      use_movie_avg = true;
+      break;
+    case BASELINE_ZERO:
+      use_user_avg = false;
+      use_movie_avg = false;
+      break;
+    case BASELINE_MOVIE_AVG:
+      use_user_avg = false;
+      use_movie_avg = true;
+      break;
+    case BASELINE_USER_AVG:
+      use_user_avg = true;
+      use_movie_avg = false;
+    case default:
+      std::cout << "Invalid base type given; assuming BASELINE_STANDARD.\n";
+      set_type(BASELINE_STANDARD);
+  }
 }
 
 
@@ -51,12 +82,25 @@ float Baseline::get_baseline(int user_id, int movie_id) {
   }
 //  std::cout << "Accessing baseline for (" << user_id << ", " << movie_id << ")\n";
   
-  if (!calculated_user_avg[user_id])
+  // Calculate user/movie averages, if necessary
+  if (use_user_avg && !calculated_user_avg[user_id])
     compute_user_average(user_id);
-  if (!calculated_movie_avg[movie_id])
+  if (use_movie_avg && !calculated_movie_avg[movie_id])
     compute_movie_average(movie_id);
     
-  return (user_avgs[user_id] + movie_avgs[movie_id])/2;
+  // Calculate and return baseline value
+  float baseline;
+  switch (type) {
+    case BASELINE_STANDARD:
+      baseline = (user_avgs[user_id] + movie_avgs[movie_id])/2;
+    case BASELINE_ZERO:
+      baseline = 0;
+    case BASELINE_USER_AVG:
+      baseline = user_avgs[user_id];
+    case BASELINE_MOVIE_AVG:
+      baseline = movie_avgs[movie_id];
+
+  return baseline;
 }
 
 
