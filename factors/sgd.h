@@ -17,8 +17,9 @@ float * gradient(const float * const * u,
 float * coordinateGradient(const float * const * u,
                            const float * const * v,
                            const int index,
+                           const DataAccessor * d,
+                           Baseline * b,
                            const int factor_length,
-                           const int non_factor_width,
                            float lambda,
                            bool isU);
 
