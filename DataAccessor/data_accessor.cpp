@@ -1,6 +1,6 @@
 #include "data_accessor.h"
 
-DataAccessor::DataAccessor() {
+DataAccessor::DataAccessor(int k) {
   num_entries = 0;
   num_users = 0;
   num_movies = 0;
@@ -12,6 +12,9 @@ DataAccessor::DataAccessor() {
   entries_per_movie = new int[1];
   movie_start_indices = new int[1];
   movie_entry_indices = new int[1];
+
+  val_ids = new unsigned char[1];
+  num_val_sets = k;
 }
 
 DataAccessor::~DataAccessor() {
@@ -22,6 +25,8 @@ DataAccessor::~DataAccessor() {
   delete[] entries_per_user;
   delete[] user_start_indices;
   delete[] entries;
+
+  delete[] val_ids;
 }
 
 // Loads data from a file compressed in the format described in data_accessor.h.
@@ -29,10 +34,14 @@ DataAccessor::~DataAccessor() {
 void DataAccessor::load_data(char *datafile) {
   std::ifstream input(datafile);
   
+  // The first 12 bytes of the file specify the number of entries,
+  // number of users, and number of movies in the data file.
   input.read(reinterpret_cast<char*>(&num_entries), sizeof(int));
   input.read(reinterpret_cast<char*>(&num_users), sizeof(int));
   input.read(reinterpret_cast<char*>(&num_movies), sizeof(int));
   
+  // The rest of the file specifies the number of ratings per user
+  // followed by compressed entry values specifying the entry's movie id, rating, and date
   delete[] user_start_indices;
   delete[] entries_per_user;
   delete[] entries;
@@ -42,11 +51,14 @@ void DataAccessor::load_data(char *datafile) {
   input.read(reinterpret_cast<char*>(entries_per_user), num_users*sizeof(int));
   input.read(reinterpret_cast<char*>(entries), num_entries*sizeof(int));
   
+  // Calculate the index of each user's first entry in the entries array.
+  // This is for efficiency purposes later
   user_start_indices[0] = 0;
   for (int i = 1; i < num_users; i++) {
     user_start_indices[i] = user_start_indices[i-1] + entries_per_user[i-1];
   }
   
+  // Calculate movie information for efficiency purposes later
   delete[] movie_entry_indices;
   delete[] movie_start_indices;
   delete[] entries_per_movie;
@@ -55,6 +67,12 @@ void DataAccessor::load_data(char *datafile) {
   movie_start_indices = new int[num_movies];
   entries_per_movie = new int[num_movies];
   calc_movie_info();
+
+  // Calculate validation IDs for each entry, between 0 and 255
+  delete[] val_ids;
+  val_ids = new unsigned char[num_entries];
+  reset_validation_ids();
+
 }
 
 
@@ -162,13 +180,59 @@ void DataAccessor::extract_all(entry_t entry, int &user_id, int &movie_id, int &
 }
 
 
+  // Validation functionality
+  // After loading from a data file, each entry is associated with
+  // a random number V from 0 to 255, inclusive. The particular
+  // validation ID for a given entry is V (mod k).
+  // The value of V is kept constant (even if k is modified) unless
+  // reset_validation_ids() is called.
+  //
+  // An entry should be checked for its validation ID prior to being
+  // used for SGD or in other code. This checking will NOT be done
+  // by the DataAccessor class.
+
+  // Set/get number of validation sets to use
+  // k should be between 0 and 255, inclusive
+  void DataAccessor::set_num_validation_sets(int k) {
+    num_val_sets = k;
+  }
+
+  int DataAccessor::get_num_validation_sets() const {
+    return num_val_sets;
+  }
+
+  // Get validation ID associated with the given entry
+  // The returned validation ID will be between 0 and k-1, inclusive for a valid entry
+  // If no entry associated with the given user exists, then returns -1.
+  int DataAccessor::get_validation_id(int index) const {
+    return val_ids[index] % num_val_sets;
+  }
+  int DataAccessor::get_validation_id(int user_id, int movie_id) const {
+    int index = find_entry_index(user_id, movie_id);
+    if (index != -1) 
+      return get_validation_id(index);
+    else
+      return -1;
+  }
+  int DataAccessor::get_validation_id(entry_t entry) const {
+    return get_validation_id(extract_user_id(entry), extract_movie_id(entry));
+  }
+
+  // Randomize validation IDs
+  // Gives new random values of V for each entry between 0 and 255
+  void DataAccessor::reset_validation_ids() {
+    srand(time(NULL));
+    for (int i = 0; i < num_entries; i++)
+      val_ids[i] = static_cast<unsigned char>(rand() % 255);
+  }
+
 
 //// Private member functions
 
-// Retrieves the entry value of the desired entry
+// Retrieves the entry index of the desired entry
 // Does a modified binary search between the possible indices of the particular movie rating.
 // If the entry is found, returns the entry value. Otherwise, returns -1.  
-int DataAccessor::find_entry_val(int user_id, int movie_id) const {
+int DataAccessor::find_entry_index(int user_id, int movie_id) const {
   int min_index, max_index;
   int guess;
   int entry_val, entry_movie_id;
@@ -186,12 +250,19 @@ int DataAccessor::find_entry_val(int user_id, int movie_id) const {
     } else if (entry_movie_id > movie_id) { // too far, adjust max_index
       max_index = guess - 1;
     } else { // movie rating found!
-      return entry_val;
+      return guess;
     }
     
     guess = movie_id * (max_index - min_index) / num_movies + min_index;
   }
   return -1; // movie rating not found
+}
+int DataAccessor::find_entry_val(int user_id, int movie_id) const {
+  int index = find_entry_index(user_id, movie_id);
+  if (index != -1)
+    return entries[index];
+  else
+    return -1;
 }
 
 

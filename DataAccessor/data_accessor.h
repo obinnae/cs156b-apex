@@ -50,6 +50,7 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 
 
 #define MAX_USERS 458293
@@ -76,6 +77,9 @@ class DataAccessor {
   int *entries_per_movie;
   int *movie_start_indices;
   int *movie_entry_indices;
+
+  unsigned char *val_ids;
+  int num_val_sets;
   
 public:
   DataAccessor(int k = 8); // default constructor (default # validation sets = 8)
@@ -119,6 +123,10 @@ public:
   // validation ID for a given entry is V (mod k).
   // The value of V is kept constant (even if k is modified) unless
   // reset_validation_ids() is called.
+  //
+  // An entry should be checked for its validation ID prior to being
+  // used for SGD or in other code. This checking will NOT be done
+  // by the DataAccessor class.
 
   // Set/get number of validation sets to use
   // k should be between 0 and 255, inclusive
@@ -127,9 +135,9 @@ public:
 
   // Get validation ID associated with the given entry
   // The returned validation ID will be between 0 and k-1, inclusive
-  int get_validation_id(int index) const;
-  int get_validation_id(entry_t entry) const;
+  int get_validation_id(int index) const; // this is fastest; use if possible
   int get_validation_id(int user_id, int movie_id) const;
+  int get_validation_id(entry_t entry) const;
 
   // Randomize validation IDs
   // Gives new random values of V for each entry
@@ -137,7 +145,8 @@ public:
   
   
 private:
-  // Retrieves the entry value of the desired entry
+  // Retrieves the entry information using user and movie IDs
+  int find_entry_index(int user_id, int movie_id) const;
   int find_entry_val(int user_id, int movie_id) const;
   
   // Extract data from a compressed 4-byte entry value holding movie id, rating, and date.
