@@ -83,7 +83,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 		
 	  	delete[] step;
 
-      if (k % 500000 == 0) {
+      if (k % 1 == 0) {
 	  		double avg_change = 0;
 	  		for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
 		  	std::cout << "Iteration " << k
@@ -186,11 +186,12 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
     
   // Calculate in-sample error
   float error = calc_in_sample_error(U, V, factors, &d, &b);
+
+  std::cout << "RMSE (in sample): " << error << std::endl;
   
   //create qual submission
   runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
 
-  std::cout << "RMSE (in sample): " << error << std::endl;
 
 }
 

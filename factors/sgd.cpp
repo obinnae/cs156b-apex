@@ -86,7 +86,7 @@ float * coordinateGradient(const float * const * u,
     int v_index = d->extract_movie_id(e);
     // float rating = (float) d->extract_rating(e);
 
-    entry_t * user_movie_entries; //using this as general case for getting all movies associated with user
+    entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE]; //using this as general case for getting all movies associated with user
                                   // or all users associated with a specific movie
     int num_entries;
 
@@ -100,7 +100,7 @@ float * coordinateGradient(const float * const * u,
     float regularization_term[factor_length];
     float baseline_rating;
 
-    int * non_factor_indexes;
+    int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
     int factor_i;
     int nfactor_i;
 
@@ -125,6 +125,9 @@ float * coordinateGradient(const float * const * u,
         }
     }
 
+    for (int i = 0; i < factor_length; i++)
+        main_term[i] = 0;
+
     for (int j = 0; j < num_entries; j++){ //Need to find a way to only iterate through available vals
 
         /*
@@ -142,15 +145,19 @@ float * coordinateGradient(const float * const * u,
 
         float error = rating - baseline_rating;
         for (int i = 0; i < factor_length; i++){
-            error -= factor[factor_i][i] + non_factor[non_factor_indexes[j]][i];
+            error -= factor[factor_i][i] * non_factor[non_factor_indexes[j]][i];
         }
         for (int i = 0; i < factor_length; i++){
             main_term[i] += (non_factor[non_factor_indexes[j]][i] * error);
-            regularization_term[i] = lambda * factor[factor_i][i] / d->get_num_entries();
         }
     }
     for (int i = 0; i < factor_length; i++){
+        regularization_term[i] = lambda * factor[factor_i][i];
         factor_gradient[i] = regularization_term[i] - main_term[i];
     }
+
+    delete[] non_factor_indexes;
+    delete[] user_movie_entries;
+
     return factor_gradient;
 }
