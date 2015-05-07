@@ -46,28 +46,50 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	int index;
 	int movie_id, user_id;
 	float *step;
-	entry_t e;
+	entry_t e; // Might not need anymore
+  entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
+  int * non_factor_indexes;
 	
 	//Loop for the chosen number of epochs
 	for (int epoch = 0; epoch < epochs; epoch++) {
-	  for (int k = 0; k < d->get_num_entries(); k++) {
+	  for (int k = 0; k < (MAX_USERS + MAX_MOVIES); k++) {
 
   		//randomly select U or V
+      int num_non_factors;
 	  	isU = (rand() % 2) == 1;
+
+      if (isU){
+        index = rand() % MAX_USERS;
+        num_non_factors = d->get_movie_entries(index, user_movie_entries);
+        non_factor_indexes = new int[num_non_factors];
+        for (int i=0; i < num_non_factors; i++){
+          non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
+        }
+      }
+
+      else {
+        index = rand() % MAX_MOVIES;
+        num_non_factors = d->get_user_entries(index, user_movie_entries);
+        non_factor_indexes = new int[num_non_factors];
+        for (int i=0; i < num_non_factors; i++){
+          non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
+        }
+      }
  
   		//randomly select one index i of matrix
-	  	do {
-    		index = rand() % d->get_num_entries();
-  	  	e = d->get_entry(index);
-  	  } while (d->extract_rating(e) == 0);
+	  	// do {
+    // 		index = rand() % d->get_num_entries();
+  	 //  	e = d->get_entry(index);
+  	 //  } while (d->extract_rating(e) == 0); //Why this check?
+
 
       user_id = d->extract_user_id(e);
-      movie_id = d->extract_movie_id(e);
+      movie_id = d->extract_movie_id(e); // <== REVISIT and see if used anywhere besides sgd
 
 //      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
   		// calculate a gradient step (using Obi's code in sgd.cpp)
-	  	step = coordinateGradient(U, V, index, d, b, factors,lambda, isU);
+	  	step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU);
 
   		// take a gradient step
 	  	if(isU)
@@ -83,7 +105,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 		
 	  	delete[] step;
 
-      if (k % 500000 == 0) {
+      if (k % 1 == 0) {
 	  		double avg_change = 0;
 	  		for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
 		  	std::cout << "Iteration " << k
@@ -97,6 +119,8 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	  std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
 	}
 	std::cout << std::endl;
+
+  delete[] user_movie_entries;
 }
 
 float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b) {
@@ -144,7 +168,7 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
 	DataAccessor d;
 	d.load_data(data_path);
 	
-	Baseline b(&d);
+	Baseline b(&d); // Baseline instantiation
 	
 	int num_users = d.get_num_users();
 	int num_movies = d.get_num_movies();
@@ -228,3 +252,8 @@ int main(int argc, char *argv[]) {
   std::cout << "\nMatrix factorization finished!\n";
   
 }
+/* NOTES
+
+Line 163 ...  Baseline instantiation? Where do we create instance of it. Same with DataAccesor
+
+*/
