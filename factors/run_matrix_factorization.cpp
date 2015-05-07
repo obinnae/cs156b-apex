@@ -67,7 +67,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 //      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
   		// calculate a gradient step (using Obi's code in sgd.cpp)
-	  	step = gradient(U, V, index, d, b, factors,lambda, isU);
+	  	step = coordinateGradient(U, V, index, d, b, factors,lambda, isU);
 
   		// take a gradient step
 	  	if(isU)
