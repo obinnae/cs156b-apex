@@ -68,7 +68,7 @@ float * gradient(const float * const * u,
     return factor_gradient;
 }
 
-// NEEDS SIGNIFICANT UPDATING.
+
 float * coordinateGradient(const float * const * u,
                            const float * const * v,
                            const int index,
@@ -79,7 +79,8 @@ float * coordinateGradient(const float * const * u,
                            const int num_non_factors,
                            const int factor_length,
                            float lambda,
-                           bool isU){
+                           bool isU,
+                           int fold = -1){
 
 
     // float baseline_rating = (float) b->get_baseline(u_index, v_index);
@@ -117,16 +118,19 @@ float * coordinateGradient(const float * const * u,
          * Loop that follows calculates the error arrising
          * from aproximating the rating using the factors
          */
+        entry_t entry = user_movie_entries[j];
+        int rating = d->extract_rating(entry);
 
-        float rating = (float) d->extract_rating(user_movie_entries[j]);
-        if (rating == 0) continue;
-
-        if (isU) {
+        // ignore rating if it's in qual or in the validation set
+        if (rating == 0 || d->get_validation_id(entry) == fold) continue;
+        
+        baseline_rating = b->get_baseline(d->extract_user_id(entry), d->extract_movie_id(entry));
+        /*if (isU) {
             baseline_rating = (float) b->get_baseline(index, non_factor_indexes[j]);
         }
         else {
             baseline_rating = (float) b->get_baseline(non_factor_indexes[j], index);
-        }
+        }*/
 
         float error = rating - baseline_rating;
         for (int i = 0; i < factor_length; i++){

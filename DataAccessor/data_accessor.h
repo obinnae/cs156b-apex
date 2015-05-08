@@ -61,7 +61,7 @@
 #define MAX_ENTRIES_PER_MOVIE 242126
 
 typedef struct entry_compressed_t { unsigned char x[6]; } entry_compressed_t;
-typedef struct entry_t { unsigned int x[4]; } entry_t;
+typedef struct entry_t { unsigned int x[5]; } entry_t;
 
 class DataAccessor {
 // private member variables
@@ -111,10 +111,12 @@ public:
   int get_movie_entries(int movie_id, entry_t *movie_entries) const;
   
   // Get rating information from an entry_t object
+  int extract_entry_index(entry_t entry) const;
   int extract_user_id(entry_t entry) const;
   int extract_movie_id(entry_t entry) const;
   int extract_rating(entry_t entry) const;
   int extract_date(entry_t entry) const;
+  int extract_validation_id(entry_t entry) const; // for consistency, but the validation id isn't actually stored within the entry
   void extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const;
 
   // Validation functionality
@@ -157,8 +159,8 @@ private:
   void parse_entry_val(entry_compressed_t entry_val, int &user_id, int &movie_id, int &rating, int &date) const;
   
   // Convert between compressed and uncompressed entry values
-  entry_t make_entry(int user_id, int movie_id, int rating, int date) const;
-  entry_t decompress_entry_val(entry_compressed_t entry_val) const;
+  entry_t make_entry(int index, int user_id, int movie_id, int rating, int date) const;
+  entry_t decompress_entry_val(int index, entry_compressed_t entry_val) const;
   entry_compressed_t compress_entry(entry_t entry) const;
 
   // Convert between compressed entry value and a long (which is slightly less compressed but easier to manipulate)
