@@ -50,6 +50,7 @@
 #include <string>
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 
 
 #define MAX_USERS 458293
@@ -76,9 +77,12 @@ class DataAccessor {
   int *entries_per_movie;
   int *movie_start_indices;
   int *movie_entry_indices;
+
+  unsigned char *val_ids;
+  int num_val_sets;
   
 public:
-  DataAccessor(); // default constructor
+  DataAccessor(int k = 8); // default constructor (default # validation sets = 8)
   ~DataAccessor(); // destructor
   
   void load_data(char *datafile); // load data from file into memory for quick access
@@ -112,6 +116,32 @@ public:
   int extract_rating(entry_t entry) const;
   int extract_date(entry_t entry) const;
   void extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const;
+
+  // Validation functionality
+  // After loading from a data file, each entry is associated with
+  // a random number V from 0 to 255, inclusive. The particular
+  // validation ID for a given entry is V (mod k).
+  // The value of V is kept constant (even if k is modified) unless
+  // reset_validation_ids() is called.
+  //
+  // An entry should be checked for its validation ID prior to being
+  // used for SGD or in other code. This checking will NOT be done
+  // by the DataAccessor class.
+
+  // Set/get number of validation sets to use
+  // k should be between 0 and 255, inclusive
+  void set_num_validation_sets(int k);
+  int get_num_validation_sets() const;
+
+  // Get validation ID associated with the given entry
+  // The returned validation ID will be between 0 and k-1, inclusive
+  int get_validation_id(int index) const; // this is fastest; use if possible
+  int get_validation_id(int user_id, int movie_id) const;
+  int get_validation_id(entry_t entry) const;
+
+  // Randomize validation IDs
+  // Gives new random values of V for each entry
+  void reset_validation_ids();
   
   
 private:

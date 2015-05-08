@@ -16,7 +16,8 @@
 //       Information on a complete entry in a four-int array. Takes 16 bytes.
 //       Quickest to access entry information.
 
-DataAccessor::DataAccessor() {
+
+DataAccessor::DataAccessor(int k) {
   num_entries = 0;
   num_users = 0;
   num_movies = 0;
@@ -28,6 +29,9 @@ DataAccessor::DataAccessor() {
   entries_per_movie = new int[1];
   movie_start_indices = new int[1];
   movie_entry_indices = new int[1];
+
+  val_ids = new unsigned char[1];
+  num_val_sets = k;
 }
 
 DataAccessor::~DataAccessor() {
@@ -38,6 +42,8 @@ DataAccessor::~DataAccessor() {
   delete[] entries_per_user;
   delete[] user_start_indices;
   delete[] entries;
+
+  delete[] val_ids;
 }
 
 // Loads data from a file compressed in the format described in data_accessor.h.
@@ -45,6 +51,8 @@ DataAccessor::~DataAccessor() {
 void DataAccessor::load_data(char *datafile) {
   std::ifstream input(datafile);
   
+  // The first 12 bytes of the file specify the number of entries,
+  // number of users, and number of movies in the data file.
   // Load number of entries, users, and movies in data file
   input.read(reinterpret_cast<char*>(&num_entries), sizeof(int));
   input.read(reinterpret_cast<char*>(&num_users), sizeof(int));
@@ -54,15 +62,15 @@ void DataAccessor::load_data(char *datafile) {
   delete[] entries_per_user;
   entries_per_user = new int[num_users];
   input.read(reinterpret_cast<char*>(entries_per_user), num_users*sizeof(int));
-
+  
   // Calculate index of the first entry for each user in the entries array
+  // This is for efficiency purposes later
   delete[] user_start_indices;
   user_start_indices = new int[num_users];
   user_start_indices[0] = 0;
   for (int i = 1; i < num_users; i++) {
     user_start_indices[i] = user_start_indices[i-1] + entries_per_user[i-1];
   }
-
 
   // Load the entry data from the data file and convert it entry_compressed_t values
   int *entries_temp = new int[num_entries];
@@ -88,6 +96,12 @@ void DataAccessor::load_data(char *datafile) {
   movie_start_indices = new int[num_movies];
   entries_per_movie = new int[num_movies];
   calc_movie_info();
+
+  // Calculate validation IDs for each entry, between 0 and 255
+  // When a validation ID is requested, they will be returned (mod k), where k is # validation sets
+  delete[] val_ids;
+  val_ids = new unsigned char[num_entries];
+  reset_validation_ids();
 }
 
 
@@ -179,6 +193,52 @@ void DataAccessor::extract_all(entry_t entry, int &user_id, int &movie_id, int &
   date = entry.x[3];
 }
 
+
+// Validation functionality
+// After loading from a data file, each entry is associated with
+// a random number V from 0 to 255, inclusive. The particular
+// validation ID for a given entry is V (mod k).
+// The value of V is kept constant (even if k is modified) unless
+// reset_validation_ids() is called.
+//
+// An entry should be checked for its validation ID prior to being
+// used for SGD or in other code. This checking will NOT be done
+// by the DataAccessor class.
+
+// Set/get number of validation sets to use
+// k should be between 0 and 255, inclusive
+void DataAccessor::set_num_validation_sets(int k) {
+  num_val_sets = k;
+}
+
+int DataAccessor::get_num_validation_sets() const {
+  return num_val_sets;
+}
+
+// Get validation ID associated with the given entry
+// The returned validation ID will be between 0 and k-1, inclusive for a valid entry
+// If no entry associated with the given user exists, then returns -1.
+int DataAccessor::get_validation_id(int index) const {
+  return val_ids[index] % num_val_sets;
+}
+int DataAccessor::get_validation_id(int user_id, int movie_id) const {
+  int index = find_entry_index(user_id, movie_id);
+  if (index != -1) 
+    return get_validation_id(index);
+  else
+    return -1;
+}
+int DataAccessor::get_validation_id(entry_t entry) const {
+  return get_validation_id(extract_user_id(entry), extract_movie_id(entry));
+}
+
+// Randomize validation IDs
+// Gives new random values of V for each entry between 0 and 255
+void DataAccessor::reset_validation_ids() {
+  srand(time(NULL));
+  for (int i = 0; i < num_entries; i++)
+    val_ids[i] = static_cast<unsigned char>(rand() % 255);
+}
 
 
 //// Private member functions
