@@ -140,7 +140,6 @@ float * coordinateGradient(const float * const * u,
         regularization_term[i] = lambda * factor[index][i];
         factor_gradient[i] = regularization_term[i] - main_term[i];
     }
-    delete [] non_factor_indexes;
 
     return factor_gradient;
 }
