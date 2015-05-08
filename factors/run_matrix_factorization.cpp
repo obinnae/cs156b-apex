@@ -65,23 +65,22 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	  	//isU = (rand() % 2) == 1;
       
       //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
-      if (k < d->get_num_users()){
+      if (k < d->get_num_users()) {
         //index = rand() % d->get_num_users();
         //std::cout << "  Selected user " << index << std::endl;
         isU = true;
         index = k;
         num_non_factors = d->get_user_entries(index, user_movie_entries);
         //std::cout << "  Retrieved " << num_non_factors << " ratings from user " << index << std::endl;
-        for (int i=0; i < num_non_factors; i++){
+        for (int i=0; i < num_non_factors; i++) {
           non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
         }
-      }
-      else {
+      } else {
         isU = false;
         index = k - d->get_num_users();
         //index = rand() % d->get_num_movies();
         num_non_factors = d->get_movie_entries(index, user_movie_entries);
-        for (int i=0; i < num_non_factors; i++){
+        for (int i=0; i < num_non_factors; i++) {
           non_factor_indexes[i]=d->extract_user_id(user_movie_entries[i]);
         }
       }
@@ -172,13 +171,14 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   return sqrt(error / num_test_pts);
 }
 
-void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=1)
+void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=-1)
 {
 	// declare the number of epochs of SGD you want to do
 	// # epochs = # iters * # factors
 
 	DataAccessor d;
 	d.load_data(data_path);
+  if (folds != -1) d.set_num_validation_sets(folds);
 	
 	Baseline b(&d); // Baseline instantiation
 	
@@ -205,38 +205,37 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
     V[i] = new float[factors];
   }
 
-//  for (fold = 0; fold < folds; fold++){
-            
-    srand(time(NULL));
+  srand(time(NULL));
+
+  for (fold = 0; fold < folds; fold++){
 
     initialize_latent_factors(factors, U, V, num_users, num_movies);
             
     for (epoch = 0; epoch < epochs; epoch++){
       update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
+      errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
       std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
-//      errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
     }
+  }
     
   // Calculate in-sample error
 
-  float error = calc_in_sample_error(U, V, factors, &d, &b);
+  //float error = calc_in_sample_error(U, V, factors, &d, &b);
 
-  std::cout << "RMSE (in sample): " << error << std::endl;
-
-            
-//  }
+  //std::cout << "RMSE (in sample): " << error << std::endl;
         
-        /* calculate average error across folds for each epoch */
-/*        int bestEpoch = 0;
-        for (epoch = 0; epoch < epochs; epoch++){
-            errors[epoch] /= folds;
-            if (errors[bestEpoch] > errors[epoch]){
-                bestEpoch = epoch;
-            }
-        }
-*/  
+  /* calculate average error across folds for each epoch */
+  int bestEpoch = 0;
+  for (epoch = 0; epoch < epochs; epoch++){
+      errors[epoch] /= folds;
+      if (errors[bestEpoch] > errors[epoch]){
+          bestEpoch = epoch;
+      }
+  }
+
   //create qual submission with best epoch
-        
+  initialize_latent_factors(factors, U, V, num_users, num_movies);
+  update_latent_factors(U, V, &d, &b, factors, bestEpoch, lambda, lrate);
   runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
 
 }
