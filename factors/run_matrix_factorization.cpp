@@ -65,7 +65,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	  	//isU = (rand() % 2) == 1;
       
       //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
-
       if (k < d->get_num_users()){
         //index = rand() % d->get_num_users();
         //std::cout << "  Selected user " << index << std::endl;
@@ -114,11 +113,11 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 			  	V[index][i] = V[index][i] - lrate * step[i];
 		  }
 
-      for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
+      for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
 
-      if (k % 10000 == 9999) {
+      if (k % 0x1FFF == 0x1FFF-1) {
 		  	std::cout << "Iteration " << (k+1)
-		  				<< ": Average factor change over last 10000 iterations: " << (avg_change/10000) << std::endl;
+		  				<< ": Average |gradient| over last 8191 iterations: " << (avg_change/0x1FFF/factors) << std::endl;
         avg_change = 0;
 		  	//std::cout << avg_change << " ";
 		  }
@@ -127,7 +126,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       //delete[] non_factor_indexes;
 
 	  }
-	  std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
 	}
 	std::cout << std::endl;
 
@@ -187,55 +185,37 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
 	int num_users = d.get_num_users();
 	int num_movies = d.get_num_movies();
 
-        int fold;
-        int epoch; // current epoch
+  int fold;
+  int epoch; // current epoch
 
-        /* sum of errors at each epoch; init to all 0 */
-        float *errors = new float[epochs];
-        for (epoch = 0; epoch < epochs; epoch++){
-            errors[epoch] = 0;
-        }
-
-        
-        //declare the latent factors matrices
-        float ** U = new float *[num_users];
-        for(int i = 0; i < num_users; i++)
-            {
-                U[i] = new float[factors];
-            }
-
-        float ** V = new float *[num_movies];
-        for(int i = 0; i < num_movies; i++)
-            {
-                V[i] = new float[factors];
-            }
-
-//        for (fold = 0; fold < folds; fold++){
-            
-            srand(time(NULL));
-
-            initialize_latent_factors(factors, U, V, num_users, num_movies);
-            
-            for (epoch = 0; epoch < epochs; epoch++){
-                update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
-//                errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
-            }
-/*
-  std::cout << "U = [";
-  for (int i = 0; i < num_users; i++) {
-    for (int j = 0; j < factors; j++) {
-      std::cout << U[i][j] << " ";
-    }
-    std::cout << ";\n";
+  /* sum of errors at each epoch; init to all 0 */
+  float *errors = new float[epochs];
+  for (epoch = 0; epoch < epochs; epoch++) {
+    errors[epoch] = 0;
   }
-  std::cout << "]\nV=[";
-  for (int i = 0; i < num_movies; i++) {
-    for (int j = 0; j < factors; j++) {
-      std::cout << V[i][j] << " ";
-    }
-    std::cout << ";\n";
+
+  //declare and allocate memory for the latent factors matrices
+  float ** U = new float *[num_users];
+  for(int i = 0; i < num_users; i++) {
+    U[i] = new float[factors];
   }
-  std::cout << "]\n";*/
+
+  float ** V = new float *[num_movies];
+  for(int i = 0; i < num_movies; i++) {
+    V[i] = new float[factors];
+  }
+
+//  for (fold = 0; fold < folds; fold++){
+            
+    srand(time(NULL));
+
+    initialize_latent_factors(factors, U, V, num_users, num_movies);
+            
+    for (epoch = 0; epoch < epochs; epoch++){
+      update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
+      std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
+//      errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
+    }
     
   // Calculate in-sample error
 
@@ -244,7 +224,7 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
   std::cout << "RMSE (in sample): " << error << std::endl;
 
             
-        }
+//  }
         
         /* calculate average error across folds for each epoch */
 /*        int bestEpoch = 0;
@@ -255,11 +235,9 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
             }
         }
 */  
-            //create qual submission with best epoch
+  //create qual submission with best epoch
         
-//        initialize_latent_factors(factors, U, V, num_users, num_movies);
-//        update_latent_factors(U, V, &d, &b, factors, bestEpoch, lambda, lrate);
-        runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
+  runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
 
 }
 
