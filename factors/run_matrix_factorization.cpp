@@ -48,7 +48,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	float *step;
 	entry_t e; // Might not need anymore
   entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
-  int * non_factor_indexes;
+  int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
 	
 	//Loop for the chosen number of epochs
 	for (int epoch = 0; epoch < epochs; epoch++) {
@@ -61,7 +61,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       if (isU){
         index = rand() % MAX_USERS;
         num_non_factors = d->get_movie_entries(index, user_movie_entries);
-        non_factor_indexes = new int[num_non_factors];
         for (int i=0; i < num_non_factors; i++){
           non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
         }
@@ -70,7 +69,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       else {
         index = rand() % MAX_MOVIES;
         num_non_factors = d->get_user_entries(index, user_movie_entries);
-        non_factor_indexes = new int[num_non_factors];
         for (int i=0; i < num_non_factors; i++){
           non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
         }
@@ -115,12 +113,15 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 		  	//std::cout << avg_change << " ";
 		  }
 
+      //delete[] non_factor_indexes;
+
 	  }
 	  std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
 	}
 	std::cout << std::endl;
 
   delete[] user_movie_entries;
+  delete[] non_factor_indexes;
 }
 
 float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b) {
