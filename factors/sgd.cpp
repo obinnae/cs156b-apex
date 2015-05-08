@@ -119,6 +119,8 @@ float * coordinateGradient(const float * const * u,
          */
 
         float rating = (float) d->extract_rating(user_movie_entries[j]);
+        if (rating == 0) continue;
+
         if (isU) {
             baseline_rating = (float) b->get_baseline(index, non_factor_indexes[j]);
         }

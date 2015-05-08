@@ -50,30 +50,41 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
   int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
 	
+  double avg_change = 0; // for printing out status updates
+
 	//Loop for the chosen number of epochs
 	for (int epoch = 0; epoch < epochs; epoch++) {
-	  for (int k = 0; k < (MAX_USERS + MAX_MOVIES); k++) {
+    //for (int k = 0; k < d->get_num_users() + d->get_num_movies(); k++) {
+    for (int k = 0; k < d->get_num_users() + d->get_num_movies(); k++) {
 
   		//randomly select U or V
       int num_non_factors;
-	  	isU = (rand() % 2) == 1;
+	  	//isU = (rand() % 2) == 1;
+      
+      //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
 
-      if (isU){
-        index = rand() % MAX_USERS;
-        num_non_factors = d->get_movie_entries(index, user_movie_entries);
+      if (k < d->get_num_users()){
+        //index = rand() % d->get_num_users();
+        //std::cout << "  Selected user " << index << std::endl;
+        isU = true;
+        index = k;
+        num_non_factors = d->get_user_entries(index, user_movie_entries);
+        //std::cout << "  Retrieved " << num_non_factors << " ratings from user " << index << std::endl;
         for (int i=0; i < num_non_factors; i++){
           non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
         }
       }
 
       else {
-        index = rand() % MAX_MOVIES;
-        num_non_factors = d->get_user_entries(index, user_movie_entries);
+        isU = false;
+        index = k - d->get_num_users();
+        //index = rand() % d->get_num_movies();
+        num_non_factors = d->get_movie_entries(index, user_movie_entries);
         for (int i=0; i < num_non_factors; i++){
-          non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
+          non_factor_indexes[i]=d->extract_user_id(user_movie_entries[i]);
         }
       }
- 
+      //std::cout << "Updating " << (isU?"user ":"movie ") << index << std::endl;
   		//randomly select one index i of matrix
 	  	// do {
     // 		index = rand() % d->get_num_entries();
@@ -81,8 +92,8 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   	 //  } while (d->extract_rating(e) == 0); //Why this check?
 
 
-      user_id = d->extract_user_id(e);
-      movie_id = d->extract_movie_id(e); // <== REVISIT and see if used anywhere besides sgd
+      //user_id = d->extract_user_id(e);
+      //movie_id = d->extract_movie_id(e); // <== REVISIT and see if used anywhere besides sgd
 
 //      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
@@ -93,26 +104,24 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	  	if(isU)
 	    {
 		    for(int i = 0; i < factors; i++)
-  				U[user_id][i] = U[user_id][i] - lrate * step[i];
+  				U[index][i] = U[index][i] - lrate * step[i];
   		}
   		else
 	  	{
 		  	for(int i = 0; i < factors; i++)
-			  	V[movie_id][i] = V[movie_id][i] - lrate * step[i];
+			  	V[index][i] = V[index][i] - lrate * step[i];
 		  }
-		
-	  	delete[] step;
 
-      if (k % 1 == 0) {
-	  		double avg_change = 0;
-	  		for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
-		  	std::cout << "Iteration " << k
-		  				<< ": Average change to " << (isU?"user ":"movie ")
-		  				<< (isU?d->extract_user_id(e):d->extract_movie_id(e))
-		  				<< " factors is " << avg_change << std::endl;
+      for (int i = 0; i < factors; i++, avg_change += abs(lrate*step[i]/factors)) {}
+
+      if (k % 10000 == 9999) {
+		  	std::cout << "Iteration " << (k+1)
+		  				<< ": Average factor change over last 10000 iterations: " << (avg_change/10000) << std::endl;
+        avg_change = 0;
 		  	//std::cout << avg_change << " ";
 		  }
 
+      delete[] step;
       //delete[] non_factor_indexes;
 
 	  }
