@@ -49,6 +49,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	entry_t e; // Might not need anymore
   entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
   int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
+  int num_non_factors;
 	
   double avg_change = 0; // for printing out status updates
 
@@ -74,7 +75,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
           non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
         }
       }
-
       else {
         isU = false;
         index = k - d->get_num_users();
