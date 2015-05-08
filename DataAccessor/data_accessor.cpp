@@ -1,5 +1,21 @@
 #include "data_accessor.h"
 
+// There are 4 levels of compression dealt with here. In order of compression level, they are:
+//  1. data file compression:
+//       Three integers (movie_id, rating, date) are compressed to a single integer with the formula
+//           (date*NUM_RATINGS + rating)*num_movies + movie_id
+//  2. entry_compressed_t
+//       Information on a complete entry (user_id, movie_id, rating, date) are compressed into 6 bytes with the format
+//           |---14 bits--||---15 bits---||-----19 bits-----|
+//                 DR          movie_id         user_id
+//       where DR = date*NUM_RATINGS + rating
+//  3. entry_compressed_t in a long int
+//       Exactly the same format as entry_compressed_t but in a numeric form for easier manipulation.
+//       Uses more than 6 bytes because long ints are bigger.
+//  4. entry_t
+//       Information on a complete entry in a four-int array. Takes 16 bytes.
+//       Quickest to access entry information.
+
 DataAccessor::DataAccessor() {
   num_entries = 0;
   num_users = 0;
@@ -56,7 +72,8 @@ void DataAccessor::load_data(char *datafile) {
   entries = new entry_compressed_t[num_entries];
   for (int user_id = 0; user_id < num_users; user_id++) {
     for (int i = 0; i < entries_per_user[user_id]; i++) {
-      entries[i] = decompress_datafile_entry(user_id, entries_temp[user_start_indices[user_id] + i]);
+      int index = user_start_indices[user_id] + i;
+      entries[index] = decompress_datafile_entry(user_id, entries_temp[index]);
     }
   }
   delete[] entries_temp;
@@ -128,13 +145,15 @@ int DataAccessor::get_user_entries(int user_id, entry_t *user_entries) const {
 // the most number of entries associated with any one movie is 242126.
 int DataAccessor::get_movie_entries(int movie_id, entry_t *movie_entries) const {
   int movie_start = movie_start_indices[movie_id];
-  int entry_index, user_id;
-  for (int i = 0; i < entries_per_movie[movie_id]; i++) {
-    entry_index = movie_entry_indices[movie_start + i];
-    movie_entries[i] = decompress_entry_val(entries[entry_index]);
+  int num_entries = entries_per_movie[movie_id];
+  int *entry_indices = new int[num_entries]; // it can be around 10% faster to copy over the entry indices before looping, not sure why...
+  memcpy(entry_indices, movie_entry_indices, num_entries*sizeof(int));
+  for (int i = 0; i < num_entries; i++) {
+    movie_entries[i] = decompress_entry_val(entries[entry_indices[i]]);
   }
+  delete[] entry_indices;
   
-  return entries_per_movie[movie_id];
+  return num_entries;
 }
 
 
@@ -211,28 +230,31 @@ int DataAccessor::find_entry_index(int user_id, int movie_id) const {
 // The entry value is calculated with the formula
 //    E = ((d*NUM_RATINGS + r)*num_movies + m)*num_users + u
 int DataAccessor::user_id_from_entry_val(entry_compressed_t entry_val) const {
-  return (int)(entry_val_to_long(entry_val) % num_users);
+  // NOTE: takes about 13ns each time
+  return ((entry_val.x[2]<<16) + (entry_val.x[1]<<8) + entry_val.x[0]) & 0x7FFFF;
 }
 int DataAccessor::movie_id_from_entry_val(entry_compressed_t entry_val) const {
-  return (int)((entry_val_to_long(entry_val) / num_users) % num_movies);
+  // NOTE: takes about 14ns each time
+  return (((entry_val.x[4]<<16) + (entry_val.x[3]<<8) + entry_val.x[2]) >> 3) & 0x7FFF;
 }
 int DataAccessor::rating_from_entry_val(entry_compressed_t entry_val) const {
-  return (int)((entry_val_to_long(entry_val) / num_users / num_movies) % NUM_RATINGS);
+  // NOTE: takes between 20ns each time
+  return (((entry_val.x[5]<<8) + entry_val.x[4]) >> 2) % NUM_RATINGS;
 }
 int DataAccessor::date_from_entry_val(entry_compressed_t entry_val) const {
-  return (int)(entry_val_to_long(entry_val) / num_users / num_movies / NUM_RATINGS) + 1;
+  // NOTE: takes about 17ns to perform this once
+  return (((entry_val.x[5]<<8) + entry_val.x[4]) >> 2) / NUM_RATINGS + 1;
 } 
 void DataAccessor::parse_entry_val(entry_compressed_t entry_val, int &user_id, int &movie_id, int &rating, int &date) const {
-  long val = entry_val_to_long(entry_val);
-  
-  user_id = val % num_users;
-  val /= num_users;
+  // NOTE: takes about 27ns each time
 
-  movie_id = val % num_movies;
-  val /= num_movies;
+  // Apologies for the gross code... but it makes a significant speed difference!
+  user_id = ((entry_val.x[2]<<16) + (entry_val.x[1]<<8) + entry_val.x[0]) & 0x7FFFF; // extract first 19 bits for user_id
 
-  rating = val % NUM_RATINGS;
-  date = val / NUM_RATINGS + 1;
+  movie_id = ((entry_val.x[4]<<13) + (entry_val.x[3]<<5) + (entry_val.x[2] >> 3)) & 0x7FFF; // extract 15 bits for movie_id
+
+  rating = ((entry_val.x[5]<<6) + (entry_val.x[4] >> 2)) % NUM_RATINGS;
+  date = ((entry_val.x[5]<<6) + (entry_val.x[4] >> 2)) / NUM_RATINGS + 1;
 }
 
 // Convert between uncompressed and compressed entry forms
@@ -258,18 +280,20 @@ entry_compressed_t DataAccessor::compress_entry(entry_t entry) const {
   long compressed_val;
 
   extract_all(entry, user_id, movie_id, rating, date);
-  compressed_val = ((date * NUM_RATINGS + rating) * num_movies + movie_id) * num_users + user_id;
+  compressed_val = (static_cast<long>((date-1)*NUM_RATINGS + rating) << 34)
+      + (static_cast<long>(movie_id) << 19) + user_id;
 
   return long_to_entry_val(compressed_val);
 }
 
 // Convert between compressed entry value and a long (which is slightly less compressed but easier to manipulate)
 long DataAccessor::entry_val_to_long(entry_compressed_t entry_val) const {
-  long val = ((long)entry_val.x[5] << 40)
-      + ((long)entry_val.x[4] << 32)
-      + (entry_val.x[3] << 24)
-      + (entry_val.x[2] << 16)
-      + (entry_val.x[1] << 8)
+  // NOTE: this takes about 26ns each time
+  long val = (static_cast<long>(entry_val.x[5]) << 40)
+      + (static_cast<long>(entry_val.x[4]) << 32)
+      + (static_cast<unsigned int>(entry_val.x[3]) << 24)
+      + (static_cast<unsigned int>(entry_val.x[2]) << 16)
+      + (static_cast<unsigned int>(entry_val.x[1]) << 8)
       + entry_val.x[0];
   return val;
 }
@@ -287,7 +311,9 @@ entry_compressed_t DataAccessor::long_to_entry_val(long l) const {
 
 // Decompress an entry value from a compressed data file
 entry_compressed_t DataAccessor::decompress_datafile_entry(int user_id, int datafile_entry) {
-  return long_to_entry_val((long)datafile_entry * num_users + user_id);
+  long movie_id = datafile_entry % num_movies;
+  long date_rating = datafile_entry / num_movies;
+  return long_to_entry_val((date_rating << 34) + (movie_id << 19) + user_id);
 }
 
 
