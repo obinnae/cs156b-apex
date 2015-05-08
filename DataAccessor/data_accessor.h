@@ -59,8 +59,8 @@
 #define MAX_ENTRIES_PER_USER 3496
 #define MAX_ENTRIES_PER_MOVIE 242126
 
-//typedef char[6] entry_compressed_t;
-typedef std::pair<int, int> entry_t;
+typedef struct entry_compressed_t { unsigned char x[6]; } entry_compressed_t;
+typedef struct entry_t { unsigned int x[4]; } entry_t;
 
 class DataAccessor {
 // private member variables
@@ -68,7 +68,7 @@ class DataAccessor {
   int num_movies;
 
   int num_entries;
-  int *entries;
+  entry_compressed_t *entries;
 
   int *entries_per_user;
   int *user_start_indices;
@@ -116,16 +116,28 @@ public:
   
 private:
   // Retrieves the entry value of the desired entry
-  int find_entry_val(int user_id, int movie_id) const;
+  entry_compressed_t find_entry_val(int user_id, int movie_id) const;
+  int find_entry_index(int user_id, int movie_id) const;
   
   // Extract data from a compressed 4-byte entry value holding movie id, rating, and date.
-  int movie_id_from_entry_val(int entry_val) const;
-  int rating_from_entry_val(int entry_val) const;
-  int date_from_entry_val(int entry_val) const;
-  void parse_entry_val(int entry_val, int &movie_id, int &rating, int &date) const;
+  int user_id_from_entry_val(entry_compressed_t entry_val) const;
+  int movie_id_from_entry_val(entry_compressed_t entry_val) const;
+  int rating_from_entry_val(entry_compressed_t entry_val) const;
+  int date_from_entry_val(entry_compressed_t entry_val) const;
+  void parse_entry_val(entry_compressed_t entry_val, int &user_id, int &movie_id, int &rating, int &date) const;
   
-  // Package entry value into entry_t datatype
-  entry_t make_entry_t(int user_id, int entry_val) const;
+  // Convert between compressed and uncompressed entry values
+  entry_t make_entry(int user_id, int movie_id, int rating, int date) const;
+  entry_t decompress_entry_val(entry_compressed_t entry_val) const;
+  entry_compressed_t compress_entry(entry_t entry) const;
+
+  // Convert between compressed entry value and a long (which is slightly less compressed but easier to manipulate)
+  long entry_val_to_long(entry_compressed_t entry_val) const;
+  entry_compressed_t long_to_entry_val(long l) const;
+
+  // Decompress an entry value from a compressed data file
+  entry_compressed_t decompress_datafile_entry(int user_id, int e);
+
   
   // Get user id for given entry index
   int user_id_from_entry_index(int index) const;
