@@ -24,6 +24,7 @@ float * coordinateGradient(const float * const * u,
                            const int num_non_factors,
                            const int factor_length,
                            float lambda,
-                           bool isU);
+                           bool isU,
+                           int fold = -1);
 
 #endif

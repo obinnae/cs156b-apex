@@ -80,7 +80,7 @@ float * coordinateGradient(const float * const * u,
                            const int factor_length,
                            float lambda,
                            bool isU,
-                           int fold = -1){
+                           int fold){
 
 
     // float baseline_rating = (float) b->get_baseline(u_index, v_index);

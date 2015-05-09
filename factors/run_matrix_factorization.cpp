@@ -104,12 +104,12 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	  	if(isU)
 	    {
 		    for(int i = 0; i < factors; i++)
-  				U[index][i] = U[index][i] - lrate * step[i];
+  				U[index][i] = U[index][i] - lrate * step[i] / num_non_factors;
   		}
   		else
 	  	{
 		  	for(int i = 0; i < factors; i++)
-			  	V[index][i] = V[index][i] - lrate * step[i];
+			  	V[index][i] = V[index][i] - lrate * step[i] / num_non_factors;
 		  }
 
       for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
@@ -167,11 +167,12 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
     
   }
+  std::cout << "100%: " << sqrt(error / num_test_pts) << std::endl;
   
   return sqrt(error / num_test_pts);
 }
 
-void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=-1)
+void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=1)
 {
 	// declare the number of epochs of SGD you want to do
 	// # epochs = # iters * # factors
