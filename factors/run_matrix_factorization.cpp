@@ -98,7 +98,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 //      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
   		// calculate a gradient step (using Obi's code in sgd.cpp)
-	  	step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU);
+      step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU, fold);
 
   		// take a gradient step
 	  	if(isU)
@@ -143,6 +143,11 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   entry_t e;
   int user_id, movie_id, rating;
   for (int i = 0; i < d->get_num_entries(); i++) {
+
+      // If its the fold we're leaving out, skip it
+      if (d->get_validation_id(i) == fold){
+          continue;
+      }
     entry_t e = d->get_entry(i);
     rating = d->extract_rating(e);
     
@@ -171,6 +176,55 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   
   return sqrt(error / num_test_pts);
 }
+
+float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b, int fold=-1){
+    /* calculates out of sample erorr (error of entries that are equal to fold) */
+
+    /* TODO: consider merging with calc_in_sample error, so error checking just does one pass */
+    float error = 0;
+    int num_test_pts = 0;
+
+    std::cout << "Calculating E_out...\n";
+
+    entry_t e;
+    int user_id, movie_id, rating;
+
+    for (int i = 0; i < d->get_num_entries(); i++) {
+
+        //if it's not the fold, then it's in-sample, so don't check
+        if (d->get_validation_id(i) != fold){
+            continue;
+        }
+        
+        entry_t e = d->get_entry(i);
+        
+        
+        // If not a qual entry then calculate and accumulate error
+        if (rating != 0) {
+            user_id = d->extract_user_id(e);
+            movie_id = d->extract_movie_id(e);
+            
+            // Increment error
+            float rating_error = 0;
+            for (int j = 0; j < num_factors; j++) {
+                rating_error += U[user_id][j] * V[movie_id][j];
+            }
+            rating_error -= rating - b->get_baseline(user_id, movie_id);
+            error += rating_error * rating_error;
+            
+            // Increment number of test points
+            num_test_pts++;
+        }
+        
+        if (i % 10000000 == 0)
+            std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
+        
+    }
+    std::cout << "100%: " << sqrt(error / num_test_pts) << std::endl;
+    
+    return sqrt(error / num_test_pts);
+}
+
 
 void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=1)
 {
@@ -214,7 +268,7 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
     
     for (epoch = 0; epoch < epochs; epoch++){
       update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
-      errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
+      errors[epoch] += calc_out_sample_error(U, V, factors, &d, &b, fold);
       std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
       
       entry_t *e = new entry_t[MAX_ENTRIES_PER_USER];
