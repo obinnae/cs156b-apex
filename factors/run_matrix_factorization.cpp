@@ -112,7 +112,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 			  	V[index][i] = V[index][i] - lrate * step[i] / num_non_factors;
 		  }
 
-      for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
+      for (int i = 0; i < factors; i++, avg_change += abs(step[i]) / num_non_factors) {}
 
       if (k % 0x1FFF == 0x1FFF-1) {
 		  	std::cout << "Iteration " << (k+1)
@@ -211,11 +211,19 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
   for (fold = 0; fold < folds; fold++){
 
     initialize_latent_factors(factors, U, V, num_users, num_movies);
-            
+    
     for (epoch = 0; epoch < epochs; epoch++){
       update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
       errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
       std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
+      
+      entry_t *e = new entry_t[MAX_ENTRIES_PER_USER];
+
+      // Calculate second derivative to get better learning rate
+
+      delete[] e;
+
+
     }
   }
     
