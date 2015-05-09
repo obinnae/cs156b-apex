@@ -45,22 +45,38 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int fold=-1){
 	bool isU;
 	int index;
-	int movie_id, user_id;
+	int movie_id, user_id, rating;
 	float *step;
 	entry_t e; // Might not need anymore
-  entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
-  int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
-  int num_non_factors;
+  //entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
+  //int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
+  //int num_non_factors;
 	
   double avg_change = 0; // for printing out status updates
 
 	//Loop for the chosen number of epochs
-  for (int k = 0; k < d->get_num_users() + d->get_num_movies(); k++) {
+  for (int k = 0; k < d->get_num_entries(); k++) {
 
-		//randomly select U or V
-    int num_non_factors;
-  	//isU = (rand() % 2) == 1;
+		// randomly select U or V
+  	isU = (rand() % 2) == 1;
     
+    // Select entry index
+    index = k;
+
+    // Check that entry is not in validation set
+    if (d->get_validation_id(index) == fold) continue;
+
+    // Check if entry is not in qual
+    e = d->get_entry(index);
+    rating = d->extract_rating(e);
+    if (rating != 0) continue;
+
+    // Extract entry information
+    user_id = d->extract_user_id(e);
+    movie_id = d->extract_movie_id(e);
+
+
+/*
     //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
     if (k < d->get_num_users()) {
       //index = rand() % d->get_num_users();
@@ -80,7 +96,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       for (int i=0; i < num_non_factors; i++) {
         non_factor_indexes[i]=d->extract_user_id(user_movie_entries[i]);
       }
-    }
+    }*/
     //std::cout << "Updating " << (isU?"user ":"movie ") << index << std::endl;
 		//randomly select one index i of matrix
   	// do {
@@ -95,21 +111,22 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 //      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
 
 		// calculate a gradient step (using Obi's code in sgd.cpp)
-    step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU, fold);
+    //step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU, fold);
+    step = gradient(U, V, index, d, b, factors, lambda, isU);
 
 		// take a gradient step
   	if(isU)
     {
 	    for(int i = 0; i < factors; i++)
-				U[index][i] = U[index][i] - lrate * step[i] / num_non_factors;
+				U[user_id][i] = U[user_id][i] - lrate * step[i];
 		}
 		else
   	{
 	  	for(int i = 0; i < factors; i++)
-		  	V[index][i] = V[index][i] - lrate * step[i] / num_non_factors;
+		  	V[movie_id][i] = V[movie_id][i] - lrate * step[i];
 	  }
 
-    for (int i = 0; i < factors; i++, avg_change += abs(step[i]) / num_non_factors) {}
+    for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
 
     if (k % 0x1FFF == 0x1FFF-1) {
 	  	std::cout << "Iteration " << (k+1)
@@ -122,9 +139,6 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
     //delete[] non_factor_indexes;
 	}
 	std::cout << std::endl;
-
-  delete[] user_movie_entries;
-  delete[] non_factor_indexes;
 }
 
 float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b, int fold=-1){
