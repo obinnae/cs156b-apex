@@ -310,9 +310,10 @@ int main(int argc, char *argv[]) {
   int num_factors;
   int num_epochs;
   float lambda, lrate;
+  int num_folds;
   
-  if (argc != 8){
-      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-epochs> <lambda> <learning-rate> <qual_path> <output-file-path>\n";
+  if (argc != 9){
+      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-epochs> <lambda> <learning-rate> <#-folds> <qual_path> <output-file-path>\n";
     exit(1);
   }
   data_path = argv[1];
@@ -320,9 +321,11 @@ int main(int argc, char *argv[]) {
   num_epochs = atoi(argv[3]);
   lambda = atof(argv[4]);
   lrate = atof(argv[5]);
+  num_folds = atoi(argv[6]);
+  if (num_folds == 0) num_folds == 1;
   
-  qualPath = argv[6];
-  outputPath = argv[7];
+  qualPath = argv[7];
+  outputPath = argv[8];
 
 
   std::cout << "Running matrix factorization with the following parameters:\n"
@@ -330,9 +333,10 @@ int main(int argc, char *argv[]) {
       << "\tNumber of factors: " << num_factors << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
       << "\tLambda: " << lambda << std::endl
-      << "\tLearning rate: " << lrate << std::endl; 
+      << "\tLearning rate: " << lrate << std::endl
+      << "\tNumber of folds: " << num_folds << std::endl;
 
-  run_matrix_factorization(num_factors, data_path, num_epochs, lambda, lrate, qualPath, outputPath);
+  run_matrix_factorization(num_factors, data_path, num_epochs, lambda, lrate, qualPath, outputPath, num_folds);
 
   std::cout << "\nMatrix factorization finished!\n";
   
