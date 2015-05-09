@@ -148,8 +148,8 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       if (d->get_validation_id(i) == fold){
           continue;
       }
-    entry_t e = d->get_entry(i);
-    rating = d->extract_rating(e);
+      entry_t e = d->get_entry(i);
+      rating = d->extract_rating(e);
     
     // If not a qual entry then calculate and accumulate error
     if (rating != 0) {
@@ -168,11 +168,11 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       num_test_pts++;
     }
     
-    if (i % 10000000 == 0)
-      std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
+    if (i % 10000000 == 9999999)
+      std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
     
   }
-  std::cout << "100%: " << sqrt(error / num_test_pts) << std::endl;
+  std::cout << "100%: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
   
   return sqrt(error / num_test_pts);
 }
@@ -197,6 +197,7 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
         }
         
         entry_t e = d->get_entry(i);
+        rating = d->extract_rating(e);
         
         
         // If not a qual entry then calculate and accumulate error
@@ -215,12 +216,13 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
             // Increment number of test points
             num_test_pts++;
         }
+
         
-        if (i % 10000000 == 0)
-            std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
+        if (i % 10000000 == 9999999)
+            std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
         
     }
-    std::cout << "100%: " << sqrt(error / num_test_pts) << std::endl;
+    std::cout << "100%: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
     
     return sqrt(error / num_test_pts);
 }
@@ -271,11 +273,8 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
       errors[epoch] += calc_out_sample_error(U, V, factors, &d, &b, fold);
       std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
       
-      entry_t *e = new entry_t[MAX_ENTRIES_PER_USER];
-
       // Calculate second derivative to get better learning rate
 
-      delete[] e;
 
 
     }
@@ -297,8 +296,9 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
   }
 
   //create qual submission with best epoch
+  std::cout << "Running final matrix factorization for " << (bestEpoch+1) << " epochs\n";
   initialize_latent_factors(factors, U, V, num_users, num_movies);
-  update_latent_factors(U, V, &d, &b, factors, bestEpoch, lambda, lrate);
+  update_latent_factors(U, V, &d, &b, factors, bestEpoch+1, lambda, lrate);
   runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
 
 }
