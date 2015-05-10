@@ -4,6 +4,68 @@
 
 // DataAccessor d = new DataAccessor();
 
+float optimal_stepsize(const float * const * u,
+                        const float * const * v,
+                        entry_t e,
+                        const DataAccessor *d,
+                        Baseline *b,
+                        const int factor_length,
+                        float lambda,
+                        bool isU,
+                        float *steps) {
+    // Optimal step size is determined by:
+    //   k*gradient
+    // where k is
+    //   (D*D) / (D*gradient)
+    // with D = (second derivative matrix)(gradient)
+    // and (*) is the dot product
+
+    gradient(u, v, e, d, b, factor_length, lambda, isU, steps);
+
+    float k;
+    float k_numer = 0, k_denom = 0;
+
+    float grad_of_grad_matrix[MAX_FACTORS][MAX_FACTORS];
+    float D[MAX_FACTORS];
+
+    // Calculate second derivatives and put in matrix
+    const float * row = isU ? v[d->extract_movie_id(e)] : u[d->extract_user_id(e)];
+    
+    // Calculate D
+    // It's easier to calculate D using the (equivalent) formula
+    //   D = (row * gradient)(row) + lambda/num_entries*gradient
+    // where (*) is the dot product
+    float row_times_gradient = 0;
+    for (int i = 0; i < factor_length; i++)
+        row_times_gradient += row[i] * steps[i];
+
+    for (int i = 0; i < factor_length; i++)
+        D[i] = row_times_gradient * row[i] + lambda / d->get_num_entries() * steps[i];
+
+    // Calculate numerator and denominator of k
+    for (int i = 0; i < factor_length; i++) {
+        k_numer = k_numer + D[i] * D[i];
+        k_denom = k_denom + D[i] * steps[i];
+    }
+
+    // Calculate factor to penalize big changes
+/*    float regularizer = 0;
+    for (int i = 0; i < factor_length; i++)
+        regularizer += steps[i]*steps[i];*/
+
+    k = k_numer / k_denom;
+
+/*
+    if (d->extract_entry_index(e) % 1000000 == 0) {
+        std::cout << "k = " << k_numer << " / (" << k_denom << " + " << regularizer << ") = " << k << std::endl;
+    }*/
+
+    // Modify steps vector by multiplying by k
+    for (int i = 0; i < factor_length; i++)
+        steps[i] = steps[i] * k;
+
+    return k;
+}
 
 float * gradient(const float * const * u,
                  const float * const * v, 
@@ -52,17 +114,29 @@ float * gradient(const float * const * u,
         error -= u[u_index][i] * v[v_index][i];
     }
 
-    /*for (int i = 0; i < factor_length; i++){
-    	main_term[i] = non_factor[nfactor_i][i] * error;
-    	regularization_term[i] = lambda * factor[factor_i][i] / d->get_num_entries();
-    }*/
-    
     for (int i = 0; i < factor_length; i++){
-  		//factor_gradient[i] = regularization_term[i] - main_term[i];
         factor_gradient[i] = lambda * factor[factor_i][i] / d->get_num_entries() - non_factor[nfactor_i][i] * error;
     }
     
     return factor_gradient;
+}
+
+float grad_of_grad(const float * row,
+                   int index1,
+                   int index2,
+                   float regularization_coef // regularization_coef = lambda / num_entries)
+                   ) {
+    // Calculates the second derivative of the error with respect to two specified factors
+    // row is the row of the unchanging matrix associated with the entry being optimized for
+    // index1 and index2 are the indices of the two factors to which the 2nd deriv is taken.
+  
+    if (index1 == index2)
+        return regularization_coef + row[index1] * row[index1];
+    else
+        return row[index1] * row[index2];
+
+  
+
 }
 
 

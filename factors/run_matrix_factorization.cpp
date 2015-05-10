@@ -52,11 +52,27 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	float *step = new float[factors];
 	
   double avg_change = 0; // for printing out status updates
+  int iters_since_update = 0;
 
   time_t t1, t2; // time each epoch for informational purposes
 
 	//Loop for the chosen number of epochs
   t1 = time(NULL);
+
+  // Calculate "average" second derivative as an adjustment to the learning rate
+  float lrate_adjustment = 0;
+  for (int i = 0; i < 1000000; i++) {
+    do {
+      e = d->get_entry(rand() % d->get_num_entries());
+    } while (d->extract_rating(e) == 0 || d->get_validation_id(d->extract_entry_index(e))==fold);
+
+    lrate_adjustment = lrate_adjustment + optimal_stepsize(U, V, e, d, b, factors, lambda, rand()%2, step);
+  }
+  lrate_adjustment /= 1000000;
+
+  std::cout << "Performing matrix factorization with learning rate " << lrate << " * " << lrate_adjustment << std::endl;
+  lrate *= lrate_adjustment;
+
   for (int k = 0; k < d->get_num_entries(); k++) {
 
 		// randomly select U or V
@@ -92,12 +108,17 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 		  	V[movie_id][i] = V[movie_id][i] - lrate * step[i];
 	  }
 
-    for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
+    if (k % 16 == 0) {
+      // doing this only once every 16 iters saves ~5 seconds (@ 10 factors)
+      for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
+      iters_since_update++;
+    }
 
     if (k % 0x1FFFFF == 0x1FFFFF-1) {
 	  	std::cout << "Iteration " << (k+1)
-	  				<< ": Average |gradient| over last 2097151 iterations: " << (avg_change/0x1FFFFF/factors) << std::endl;
+	  				<< ": Average |gradient| over last 2097151 iterations: " << (avg_change/iters_since_update/factors*16) << std::endl;
       avg_change = 0;
+      iters_since_update = 0;
 	  }
 
 	}
@@ -211,6 +232,23 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
 
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     calc_in_sample_error(U, V, factors, d, b);
+
+/*    // DELETE STARTING HERE
+    time_t t1 = time(NULL);
+    float *steps = new float[factors];
+    for (int i = 0; i < 5000000; i++) {
+      entry_t e;
+      do {
+        e = d->get_entry(rand() % d->get_num_entries());
+      } while (d->extract_rating(e) == 0);
+
+      float k = optimal_stepsize(U, V, e, d, b, factors, lambda, rand()%2, steps);
+
+    }
+    std::cout << std::endl;
+    time_t t2 = time(NULL);
+    std::cout << "Calculated 100000 optimal steps in " << difftime(t2, t1) << " seconds\n";
+    // DELETE ENDING HERE*/
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
   }
