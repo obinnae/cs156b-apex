@@ -7,32 +7,28 @@
 
 float * gradient(const float * const * u,
                  const float * const * v, 
-                 const int index,
+                 entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
-                 const int factor_length,
+                 int factor_length,
                  float lambda,
-                 bool isU){
+                 bool isU,
+                 float *factor_gradient) {
 
     /*
      * TODO: Change definition from Coordinate Gradient Descent
      * to Stochastic Gradient Descent. Will require signature change
      */
 
-    entry_t e = d->get_entry(index);
     int u_index = d->extract_user_id(e);
     int v_index = d->extract_movie_id(e);
     float rating = (float) d->extract_rating(e);
-    //Would rather use a single entry_t object above and discard after this step
 
     float baseline_rating = (float) b->get_baseline(u_index, v_index);
 
     const float * const * factor;
     const float * const * non_factor;
     int factor_i, nfactor_i;
-    float main_term[factor_length];
-    float regularization_term[factor_length];
-    float *factor_gradient = new float[factor_length];
 
     if (isU) {
         factor = u;
@@ -56,13 +52,14 @@ float * gradient(const float * const * u,
         error -= u[u_index][i] * v[v_index][i];
     }
 
-    for (int i = 0; i < factor_length; i++){
+    /*for (int i = 0; i < factor_length; i++){
     	main_term[i] = non_factor[nfactor_i][i] * error;
     	regularization_term[i] = lambda * factor[factor_i][i] / d->get_num_entries();
-    }
+    }*/
     
     for (int i = 0; i < factor_length; i++){
-  		factor_gradient[i] = regularization_term[i] - main_term[i];
+  		//factor_gradient[i] = regularization_term[i] - main_term[i];
+        factor_gradient[i] = lambda * factor[factor_i][i] / d->get_num_entries() - non_factor[nfactor_i][i] * error;
     }
     
     return factor_gradient;

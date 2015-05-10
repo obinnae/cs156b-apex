@@ -44,17 +44,19 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 }
 void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int fold=-1){
 	bool isU;
+
 	int index;
+  entry_t e;
 	int movie_id, user_id, rating;
-	float *step;
-	entry_t e; // Might not need anymore
-  //entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
-  //int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
-  //int num_non_factors;
+
+	float *step = new float[factors];
 	
   double avg_change = 0; // for printing out status updates
 
+  time_t t1, t2; // time each epoch for informational purposes
+
 	//Loop for the chosen number of epochs
+  t1 = time(NULL);
   for (int k = 0; k < d->get_num_entries(); k++) {
 
 		// randomly select U or V
@@ -69,50 +71,14 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
     // Check if entry is not in qual
     e = d->get_entry(index);
     rating = d->extract_rating(e);
-    if (rating != 0) continue;
+    if (rating == 0) continue;
 
     // Extract entry information
     user_id = d->extract_user_id(e);
     movie_id = d->extract_movie_id(e);
 
-
-/*
-    //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
-    if (k < d->get_num_users()) {
-      //index = rand() % d->get_num_users();
-      //std::cout << "  Selected user " << index << std::endl;
-      isU = true;
-      index = k;
-      num_non_factors = d->get_user_entries(index, user_movie_entries);
-      //std::cout << "  Retrieved " << num_non_factors << " ratings from user " << index << std::endl;
-      for (int i=0; i < num_non_factors; i++) {
-        non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
-      }
-    } else {
-      isU = false;
-      index = k - d->get_num_users();
-      //index = rand() % d->get_num_movies();
-      num_non_factors = d->get_movie_entries(index, user_movie_entries);
-      for (int i=0; i < num_non_factors; i++) {
-        non_factor_indexes[i]=d->extract_user_id(user_movie_entries[i]);
-      }
-    }*/
-    //std::cout << "Updating " << (isU?"user ":"movie ") << index << std::endl;
-		//randomly select one index i of matrix
-  	// do {
-  // 		index = rand() % d->get_num_entries();
-	 //  	e = d->get_entry(index);
-	 //  } while (d->extract_rating(e) == 0); //Why this check?
-
-
-    //user_id = d->extract_user_id(e);
-    //movie_id = d->extract_movie_id(e); // <== REVISIT and see if used anywhere besides sgd
-
-//      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
-
-		// calculate a gradient step (using Obi's code in sgd.cpp)
-    //step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU, fold);
-    step = gradient(U, V, index, d, b, factors, lambda, isU);
+    // Calculate gradient
+    gradient(U, V, e, d, b, factors, lambda, isU, step);
 
 		// take a gradient step
   	if(isU)
@@ -128,17 +94,18 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 
     for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
 
-    if (k % 0x1FFF == 0x1FFF-1) {
+    if (k % 0x1FFFFF == 0x1FFFFF-1) {
 	  	std::cout << "Iteration " << (k+1)
-	  				<< ": Average |gradient| over last 8191 iterations: " << (avg_change/0x1FFF/factors) << std::endl;
+	  				<< ": Average |gradient| over last 2097151 iterations: " << (avg_change/0x1FFFFF/factors) << std::endl;
       avg_change = 0;
-	  	//std::cout << avg_change << " ";
 	  }
 
-    delete[] step;
-    //delete[] non_factor_indexes;
 	}
-	std::cout << std::endl;
+  t2 = time(NULL);
+
+  delete[] step;
+
+  std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
 
 float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b, int fold=-1){
@@ -153,12 +120,12 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   int user_id, movie_id, rating;
   for (int i = 0; i < d->get_num_entries(); i++) {
 
-      // If its the fold we're leaving out, skip it
-      if (d->get_validation_id(i) == fold){
-          continue;
-      }
-      entry_t e = d->get_entry(i);
-      rating = d->extract_rating(e);
+    // If its the fold we're leaving out, skip it
+    if (d->get_validation_id(i) == fold) {
+        continue;
+    }
+    entry_t e = d->get_entry(i);
+    rating = d->extract_rating(e);
     
     // If not a qual entry then calculate and accumulate error
     if (rating != 0) {
@@ -181,7 +148,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
     
   }
-  std::cout << "100%: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
+  std::cout << "E_in = " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
   
   return sqrt(error / num_test_pts);
 }
@@ -231,7 +198,7 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
             std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
         
     }
-    std::cout << "100%: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
+    std::cout << "E_out: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
     
     return sqrt(error / num_test_pts);
 }
@@ -269,7 +236,7 @@ void k_fold_factorization(float **U, float **V, int factors, int epochs, float l
       update_latent_factors(U, V, d, b, factors, 1, lambda, lrate, fold);
       errors[epoch] += calc_out_sample_error(U, V, factors, d, b, fold);
 
-      std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
+      std::cout << "*** EPOCH " << epoch << " COMPLETE ***\n\n";
     }
   }
 
@@ -345,6 +312,7 @@ int main(int argc, char *argv[]) {
   int num_folds;
   
   if (argc == 8) {
+    num_folds = -1;
     qualPath = argv[6];
     outputPath = argv[7];
   } else if (argc == 9){
