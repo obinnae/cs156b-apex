@@ -16,7 +16,7 @@ float optimal_stepsize(const float * const * u,
     // Optimal step size is determined by:
     //   k*gradient
     // where k is
-    //   (D*D) / (D*gradient)
+    //   (D*gradient) / (D*D)
     // with D = (second derivative matrix)(gradient)
     // and (*) is the dot product
 
@@ -44,8 +44,8 @@ float optimal_stepsize(const float * const * u,
 
     // Calculate numerator and denominator of k
     for (int i = 0; i < factor_length; i++) {
-        k_numer = k_numer + D[i] * D[i];
-        k_denom = k_denom + D[i] * steps[i];
+        k_numer = k_numer + D[i] * steps[i];
+        k_denom = k_denom + D[i] * D[i];
     }
 
     // Calculate factor to penalize big changes

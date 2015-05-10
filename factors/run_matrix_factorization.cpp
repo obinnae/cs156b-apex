@@ -116,7 +116,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 
     if (k % 0x1FFFFF == 0x1FFFFF-1) {
 	  	std::cout << "Iteration " << (k+1)
-	  				<< ": Average |gradient| over last 2097151 iterations: " << (avg_change/iters_since_update/factors*16) << std::endl;
+	  				<< ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors*16) << std::endl;
       avg_change = 0;
       iters_since_update = 0;
 	  }
