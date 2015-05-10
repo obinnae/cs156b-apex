@@ -25,7 +25,6 @@ float optimal_stepsize(const float * const * u,
     float k;
     float k_numer = 0, k_denom = 0;
 
-    float grad_of_grad_matrix[MAX_FACTORS][MAX_FACTORS];
     float D[MAX_FACTORS];
 
     // Calculate second derivatives and put in matrix
@@ -44,8 +43,8 @@ float optimal_stepsize(const float * const * u,
 
     // Calculate numerator and denominator of k
     for (int i = 0; i < factor_length; i++) {
-        k_numer = k_numer + D[i] * D[i];
-        k_denom = k_denom + D[i] * steps[i];
+        k_numer = k_numer + D[i] * steps[i];
+        k_denom = k_denom + D[i] * D[i];
     }
 
     // Calculate factor to penalize big changes
