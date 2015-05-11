@@ -289,7 +289,7 @@ void k_fold_factorization(float **U, float **V, int factors, int epochs, float l
 
   // run factorization for best # of epochs
   std::cout << "Best # epochs is" << (bestEpoch+1) << " epochs. Running factorization on full data set...\n";
-  single_fold_factorization(U, V, factors, epochs, lambda, lrate, d, b);
+  single_fold_factorization(U, V, factors, bestEpoch+1, lambda, lrate, d, b);
 
 }
 
