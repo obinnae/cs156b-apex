@@ -70,7 +70,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   }
   lrate_adjustment /= 1000000;
 
-  std::cout << "Performing matrix factorization with learning rate " << lrate << " * " << lrate_adjustment << std::endl;
+  std::cout << "Performing matrix factorization with average learning rate " << lrate << " * " << lrate_adjustment << std::endl;
   lrate *= lrate_adjustment;
 
   for (int k = 0; k < d->get_num_entries(); k++) {
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
   lrate = atof(argv[5]);
 
 
-  std::cout << "Running matrix factorization with the following parameters:\n"
+  std::cout << "Running matrix factorization with per-iteration learning rate adjustments and the following parameters:\n"
       << "\tData file: " << data_path << std::endl
       << "\tNumber of factors: " << num_factors << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
