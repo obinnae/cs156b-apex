@@ -71,7 +71,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   lrate_adjustment /= 1000000;
 
   std::cout << "Performing matrix factorization with average learning rate " << lrate << " * " << lrate_adjustment << std::endl;
-  lrate *= lrate_adjustment;
+  //lrate *= lrate_adjustment;
 
   for (int k = 0; k < d->get_num_entries(); k++) {
 
@@ -94,7 +94,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
     movie_id = d->extract_movie_id(e);
 
     // Calculate gradient
-    gradient(U, V, e, d, b, factors, lambda, isU, step);
+    optimal_stepsize(U, V, e, d, b, factors, lambda, isU, step);
 
 		// take a gradient step
   	if(isU)
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
   lrate = atof(argv[5]);
 
 
-  std::cout << "Running matrix factorization with per-iteration learning rate adjustments and the following parameters:\n"
+  std::cout << "Running matrix factorization with per-iteration learning rate adjustments:\n"
       << "\tData file: " << data_path << std::endl
       << "\tNumber of factors: " << num_factors << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
