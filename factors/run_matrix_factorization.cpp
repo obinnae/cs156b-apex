@@ -50,7 +50,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	int movie_id, user_id, rating;
 
 	float *step = new float[factors];
-	
+
   double avg_change = 0; // for printing out status updates
 
   time_t t1, t2; // time each epoch for informational purposes
@@ -61,7 +61,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 
 		// randomly select U or V
   	isU = (rand() % 2) == 1;
-    
+
     // Select entry index
     index = k;
 
@@ -113,9 +113,9 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
      * if fold = -1 */
   float error = 0;
   int num_test_pts = 0;
-  
+
   std::cout << "Calculating E_in...\n";
-  
+
   entry_t e;
   int user_id, movie_id, rating;
   for (int i = 0; i < d->get_num_entries(); i++) {
@@ -126,12 +126,12 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
     }
     entry_t e = d->get_entry(i);
     rating = d->extract_rating(e);
-    
+
     // If not a qual entry then calculate and accumulate error
     if (rating != 0) {
       user_id = d->extract_user_id(e);
       movie_id = d->extract_movie_id(e);
-      
+
       // Increment error
       float rating_error = 0;
       for (int j = 0; j < num_factors; j++) {
@@ -139,17 +139,17 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       }
       rating_error -= rating - b->get_baseline(user_id, movie_id);
       error += rating_error * rating_error;
-      
+
       // Increment number of test points
       num_test_pts++;
     }
-    
+
     if (i % 10000000 == 9999999)
       std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
-    
+
   }
   std::cout << "E_in = " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
-  
+
   return sqrt(error / num_test_pts);
 }
 
@@ -171,16 +171,16 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
         if (d->get_validation_id(i) != fold){
             continue;
         }
-        
+
         entry_t e = d->get_entry(i);
         rating = d->extract_rating(e);
-        
-        
+
+
         // If not a qual entry then calculate and accumulate error
         if (rating != 0) {
             user_id = d->extract_user_id(e);
             movie_id = d->extract_movie_id(e);
-            
+
             // Increment error
             float rating_error = 0;
             for (int j = 0; j < num_factors; j++) {
@@ -188,18 +188,18 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
             }
             rating_error -= rating - b->get_baseline(user_id, movie_id);
             error += rating_error * rating_error;
-            
+
             // Increment number of test points
             num_test_pts++;
         }
 
-        
+
         if (i % 10000000 == 9999999)
             std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
-        
+
     }
     std::cout << "E_out: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
-    
+
     return sqrt(error / num_test_pts);
 }
 
@@ -231,7 +231,7 @@ void k_fold_factorization(float **U, float **V, int factors, int epochs, float l
   // do matrix factorization <folds> times
   for (int fold = 0; fold < folds; fold++){
     initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
-    
+
     for (int epoch = 0; epoch < epochs; epoch++){
       update_latent_factors(U, V, d, b, factors, 1, lambda, lrate, fold);
       errors[epoch] += calc_out_sample_error(U, V, factors, d, b, fold);
@@ -263,9 +263,9 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
 
 	DataAccessor d;
 	d.load_data(data_path);
-	
+
 	Baseline b(&d); // Baseline instantiation
-	
+
 	int num_users = d.get_num_users();
 	int num_movies = d.get_num_movies();
 
@@ -310,7 +310,7 @@ int main(int argc, char *argv[]) {
   int num_epochs;
   float lambda, lrate;
   int num_folds;
-  
+
   if (argc == 8) {
     num_folds = -1;
     qualPath = argv[6];
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
   run_matrix_factorization(num_factors, data_path, num_epochs, lambda, lrate, qualPath, outputPath, num_folds);
 
   std::cout << "\nMatrix factorization finished!\n";
-  
+
 }
 /* NOTES
 
