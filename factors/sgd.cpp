@@ -59,7 +59,7 @@ float * gradient(const float * const * u,
     
     for (int i = 0; i < factor_length; i++){
   		//factor_gradient[i] = regularization_term[i] - main_term[i];
-        factor_gradient[i] = lambda * factor[factor_i][i] / d->get_num_entries() - non_factor[nfactor_i][i] * error;
+        factor_gradient[i] = lambda * factor[factor_i][i] - non_factor[nfactor_i][i] * error;
     }
     
     return factor_gradient;
