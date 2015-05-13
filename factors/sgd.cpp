@@ -5,15 +5,15 @@
 // DataAccessor d = new DataAccessor();
 
 
-float * gradient(const float * const * u,
+void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
                  int factor_length,
                  float lambda,
-                 bool isU,
-                 float *factor_gradient) {
+                 float *u_gradient,
+                 float *v_gradient) {
 
     /*
      * TODO: Change definition from Coordinate Gradient Descent
@@ -30,18 +30,6 @@ float * gradient(const float * const * u,
     const float * const * non_factor;
     int factor_i, nfactor_i;
 
-    if (isU) {
-        factor = u;
-        non_factor = v;
-        factor_i = u_index;
-        nfactor_i = v_index;
-    }
-    else {
-        factor = v;
-        non_factor = u;
-        factor_i = v_index;
-        nfactor_i = u_index;
-    }
         /*
          * Loop that follows calculates the error arising
          * from aproximating the rating using the factors
@@ -52,17 +40,11 @@ float * gradient(const float * const * u,
         error -= u[u_index][i] * v[v_index][i];
     }
 
-    /*for (int i = 0; i < factor_length; i++){
-    	main_term[i] = non_factor[nfactor_i][i] * error;
-    	regularization_term[i] = lambda * factor[factor_i][i] / d->get_num_entries();
-    }*/
     
     for (int i = 0; i < factor_length; i++){
-  		//factor_gradient[i] = regularization_term[i] - main_term[i];
-        factor_gradient[i] = lambda * factor[factor_i][i] - non_factor[nfactor_i][i] * error;
+        u_gradient[i] = lambda * u[u_index][i] - v[v_index][i]*error;
+        v_gradient[i] = lambda * v[v_index][i] - u[u_index][i]*error;
     }
-    
-    return factor_gradient;
 }
 
 

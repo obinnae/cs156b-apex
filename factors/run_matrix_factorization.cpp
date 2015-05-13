@@ -49,7 +49,8 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   entry_t e;
 	int movie_id, user_id, rating;
 
-	float *step = new float[factors];
+	float *u_step = new float[factors];
+  float *v_step = new float[factors];
 
   double avg_change = 0; // for printing out status updates
 
@@ -78,21 +79,15 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
     movie_id = d->extract_movie_id(e);
 
     // Calculate gradient
-    gradient(U, V, e, d, b, factors, lambda, isU, step);
+    gradient(U, V, e, d, b, factors, lambda, u_step, v_step);
 
 		// take a gradient step
-  	if(isU)
-    {
-	    for(int i = 0; i < factors; i++)
-				U[user_id][i] = U[user_id][i] - lrate * step[i];
+	  for(int i = 0; i < factors; i++) {
+			U[user_id][i] = U[user_id][i] - lrate * u_step[i];
+      V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
 		}
-		else
-  	{
-	  	for(int i = 0; i < factors; i++)
-		  	V[movie_id][i] = V[movie_id][i] - lrate * step[i];
-	  }
 
-    for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
+    for (int i = 0; i < factors; i++, avg_change += abs(u_step[i]) + abs(v_step[i])) {}
 
     if (k % 0x1FFFFF == 0x1FFFFF-1) {
 	  	std::cout << "Iteration " << (k+1)
@@ -103,7 +98,8 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 	}
   t2 = time(NULL);
 
-  delete[] step;
+  delete[] u_step;
+  delete[] v_step;
 
   std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
