@@ -26,10 +26,6 @@ void gradient(const float * const * u,
 
     float baseline_rating = (float) b->get_baseline(u_index, v_index);
 
-    const float * const * factor;
-    const float * const * non_factor;
-    int factor_i, nfactor_i;
-
         /*
          * Loop that follows calculates the error arising
          * from aproximating the rating using the factors

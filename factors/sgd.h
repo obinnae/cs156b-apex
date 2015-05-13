@@ -5,6 +5,9 @@
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
+
+#define MAX_FACTORS 200
+
 void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,

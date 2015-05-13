@@ -43,8 +43,6 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 
 }
 void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int fold=-1){
-	bool isU;
-
 	int index;
   entry_t e;
 	int movie_id, user_id, rating;
@@ -53,16 +51,13 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   float *v_step = new float[factors];
 
   double avg_change = 0; // for printing out status updates
+  int iters_since_update = 0;
 
   time_t t1, t2; // time each epoch for informational purposes
 
 	//Loop for the chosen number of epochs
   t1 = time(NULL);
   for (int k = 0; k < d->get_num_entries(); k++) {
-
-		// randomly select U or V
-  	isU = (rand() % 2) == 1;
-
     // Select entry index
     index = k;
 
@@ -87,19 +82,20 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
 		}
 
-    for (int i = 0; i < factors; i++, avg_change += abs(u_step[i]) + abs(v_step[i])) {}
+    if ((k & 0xF) == 0) {
+      for (int i = 0; i < factors; avg_change += abs(u_step[i]) + abs(v_step[i]), i++);
+      iters_since_update++;
+    }
 
     if (k % 0x1FFFFF == 0x1FFFFF-1) {
 	  	std::cout << "Iteration " << (k+1)
-	  				<< ": Average |gradient| over last 2097151 iterations: " << (avg_change/0x1FFFFF/factors) << std::endl;
+	  				<< ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
       avg_change = 0;
+      iters_since_update = 0;
 	  }
 
 	}
   t2 = time(NULL);
-
-  delete[] u_step;
-  delete[] v_step;
 
   std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
@@ -326,7 +322,7 @@ int main(int argc, char *argv[]) {
   lrate = atof(argv[5]);
 
 
-  std::cout << "Running matrix factorization with the following parameters:\n"
+  std::cout << "Running matrix factorization (standard SGD) with the following parameters:\n"
       << "\tData file: " << data_path << std::endl
       << "\tNumber of factors: " << num_factors << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
