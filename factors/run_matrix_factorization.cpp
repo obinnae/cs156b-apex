@@ -20,7 +20,7 @@ using namespace std;
 
 
 void initialize_latent_factors(int factors, float ** U, float ** V, int num_users, int num_movies) {
-	//initialize matrix elements to random numbers between 0 and 1
+	//initialize matrix elements to random numbers between -.001 to .001
 	for(int i = 0; i < num_users; i++)
 		for (int j = 0; j < factors; j++)
 			U[i][j] = ((float) rand() / (RAND_MAX));
