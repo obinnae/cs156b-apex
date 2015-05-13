@@ -23,11 +23,11 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
 	//initialize matrix elements to random numbers between -.001 to .001
 	for(int i = 0; i < num_users; i++)
 		for (int j = 0; j < factors; j++)
-			U[i][j] = ((float) rand() / (RAND_MAX)) * (1/500) - (1/1000);
+			U[i][j] = ((float) rand() / (RAND_MAX)) / 500.0) - 0.001;
 
 	for(int i = 0; i < num_movies; i++)
 		for (int j = 0; j < factors; j++)
-			V[i][j] = ((float) rand() / (RAND_MAX)) * (1/500) - (1/1000);
+			V[i][j] = ((float) rand() / (RAND_MAX)) / 500.0) - 0.001;
 
 /*	//prints out the matrix
 	for(int i = 0; i < num_users; i++)
