@@ -24,11 +24,11 @@ void initialize_latent_factors(int factors, float ** U, float ** V, int num_user
   //initialize matrix elements to random numbers between 0 and 1
   for(int i = 0; i < num_users; i++)
     for (int j = 0; j < factors; j++)
-      U[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001;
+      U[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
 
   for(int i = 0; i < num_movies; i++)
     for (int j = 0; j < factors; j++)
-      V[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001;
+      V[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
 
 /*  //prints out the matrix
   for(int i = 0; i < num_users; i++)
@@ -148,6 +148,12 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
 }
 
 float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor *p, Baseline *b_p, int fold=-1){
+    /*
+     * Now passing in reference to DataAccessor and Baseline objects for probe dataset
+     * Uses these to get the actual ratings and baselines for predictions of probe dataset
+     * Changed the names in the signature just to make it clearer which dataset we are operating on
+     */
+
     /* calculates out of sample erorr (error of entries that are equal to fold) */
 
     /* TODO: consider merging with calc_in_sample error, so error checking just does one pass */
@@ -202,7 +208,7 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
   float *errors = new float[epochs];
   for (int epoch = 0; epoch < epochs; epoch++) {
     errors[epoch] = 0;
-  }
+  } // Setting up single fold factorization to now calculate out of sample error
 
   initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
 
@@ -210,7 +216,7 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
 
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     calc_in_sample_error(U, V, factors, d, b);
-    errors[epoch] += calc_out_sample_error(U, V, factors, p, b_p);
+    errors[epoch] += calc_out_sample_error(U, V, factors, p, b_p); //Calculating out of sample error with probes DataAccessor and Baselines
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
   }
@@ -252,23 +258,25 @@ void k_fold_factorization(float **U, float **V, int factors, int epochs, float l
   // run factorization for best # of epochs
   std::cout << "Best # epochs is" << (bestEpoch+1) << " epochs. Running factorization on full data set...\n";
   //single_fold_factorization(U, V, factors, bestEpoch+1, lambda, lrate, d, b);
+  // Commented out because of signature mismatch and because right now the probe dataset is required
 
 }
 
 
 void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=-1)
-{
+{ //Included probe path in signature
+
   // declare the number of epochs of SGD you want to do
   // # epochs = (# iters) / (# total entries in data file)
 
   DataAccessor d;
   d.load_data(data_path);
 
-  DataAccessor p;
+  DataAccessor p; // Creating 2nd DataAccesor to manage probe data
   p.load_data(probe_path);
   
   Baseline b(&d); // Baseline instantiation
-  Baseline b_p(&p);
+  Baseline b_p(&p); // Baselines for probe data
   
   int num_users = d.get_num_users();
   int num_movies = d.get_num_movies();
@@ -288,7 +296,7 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   // calculate U and V
   if (folds <= 1) {
-    single_fold_factorization(U, V, factors, epochs, lambda, lrate, &d, &p, &b, &b_p);
+    single_fold_factorization(U, V, factors, epochs, lambda, lrate, &d, &p, &b, &b_p); // Added probe dataAccessor and Baseline object to call
   } else {
     k_fold_factorization(U, V, factors, epochs, lambda, lrate, folds, &d, &b);
   }
@@ -309,13 +317,14 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
 
 int main(int argc, char *argv[]) {
-  char *data_path, *probe_path, *qualPath, *outputPath;
+  char *data_path, *probe_path, *qualPath, *outputPath; //Added probe variable for reading in probe param
   int num_factors;
   int num_epochs;
   float lambda, lrate;
   int num_folds;
   
-  if (argc == 9) {
+  if (argc == 9) { // Changed Counts on argument length checks to accomodate for probe
+    // Also adjusted indices of arguments following probe
     num_folds = -1;
     qualPath = argv[7];
     outputPath = argv[8];
@@ -325,11 +334,15 @@ int main(int argc, char *argv[]) {
     outputPath = argv[9];
   } else {
     std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> [<#-folds>] <qual_path> <output-file-path>\n";
+    /*
+     * Modified usage message to clarify the extra command line arg
+     * Also renamed old data-file arg to differentiate between train-data and probe-data
+     */
     exit(1);
   }
   data_path = argv[1];
   probe_path = argv[2];
-  num_factors = atoi(argv[3]);
+  num_factors = atoi(argv[3]); //Incremented indices of args since probe has been inserted after data_path
   num_epochs = atoi(argv[4]);
   lambda = atof(argv[5]);
   lrate = atof(argv[6]);
