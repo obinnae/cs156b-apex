@@ -204,11 +204,8 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
 }
 
 void single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
-
-  float *errors = new float[epochs];
-  for (int epoch = 0; epoch < epochs; epoch++) {
-    errors[epoch] = 0;
-  } // Setting up single fold factorization to now calculate out of sample error
+  float old_error = 100; // a big number
+  float new_error;
 
   initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
 
@@ -216,9 +213,15 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
 
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     calc_in_sample_error(U, V, factors, d, b);
-    errors[epoch] += calc_out_sample_error(U, V, factors, p, b_p); //Calculating out of sample error with probes DataAccessor and Baselines
+    new_error = calc_out_sample_error(U, V, factors, p, b_p);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
+    
+    if (new_error > old_error) { // overfitting has occurred
+      std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
+      break;
+    }
+    old_error = new_error;
   }
 }
 
