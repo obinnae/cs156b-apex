@@ -35,7 +35,6 @@ void gradient(const float * const * u,
     for (int i = 0; i < factor_length; i++){
         error -= u[u_index][i] * v[v_index][i];
     }
-
     
     for (int i = 0; i < factor_length; i++){
         u_gradient[i] = lambda * u[u_index][i] - v[v_index][i]*error;

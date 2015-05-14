@@ -67,12 +67,12 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
       V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
 		}
 
-    if ((k & 0xF) == 0) {
+    if ((k & 0xFF) == 0) {
       for (int i = 0; i < factors; avg_change += abs(u_step[i]) + abs(v_step[i]), i++);
       iters_since_update++;
     }
 
-    if (k % 0x1FFFFF == 0x1FFFFF-1) {
+    if ((k & 0x1FFFFF) == 0) {
 	  	std::cout << "Iteration " << (k+1)
 	  				<< ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
       avg_change = 0;
@@ -320,7 +320,6 @@ int main(int argc, char *argv[]) {
   num_epochs = atoi(argv[4]);
   lambda = atof(argv[5]);
   lrate = atof(argv[6]);
-
 
   std::cout << "Running matrix factorization (standard SGD) with the following parameters:\n"
       << "\tData file: " << data_path << std::endl
