@@ -51,12 +51,12 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 
   // Calculate "average" second derivative as an adjustment to the learning rate
   float lrate_adjustment = 0;
-  for (int i = 0; i < 1000000; i++) {
-    do {
-      e = d->get_entry(rand() % d->get_num_entries());
-    } while (d->extract_rating(e) == 0 || d->get_validation_id(d->extract_entry_index(e))==fold);
+  for (int i = 0; i < 500000; i++) {
+    e = d->get_entry(rand() % d->get_num_entries());
 
-    lrate_adjustment = lrate_adjustment + optimal_stepsize(U, V, e, d, b, factors, lambda, rand()%2, step);
+    gradient(U, V, e, d, b, factors, lambda, u_gradient, v_gradient);
+    lrate_adjustment = lrate_adjustment + optimal_stepsize(U, V, factors, d->extract_movie_id(e), u_gradient, lambda, d, b);
+    lrate_adjustment = lrate_adjustment + optimal_stepsize(V, U, factors, d->extract_user_id(e), v_gradient, lambda, d, b);
   }
   lrate_adjustment /= 1000000;
 
@@ -77,16 +77,16 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
     // Calculate gradient and step size
     gradient(U, V, e, d, b, factors, lambda, u_gradient, v_gradient);
     u_stepsize = optimal_stepsize(U, V, factors, movie_id, u_gradient, lambda, d, b);
-    v_stepsize = optimal_stepsize(U, V, factors, user_id, v_gradient, lambda, d, b);
+    v_stepsize = optimal_stepsize(V, U, factors, user_id, v_gradient, lambda, d, b);
 
 		// take a gradient step
 	  for(int i = 0; i < factors; i++) {
-			U[user_id][i] = U[user_id][i] - lrate * u_stepsize * u_step[i];
-      V[movie_id][i] = V[movie_id][i] - lrate * v_stepsize * v_step[i];
+			U[user_id][i] = U[user_id][i] - lrate * u_stepsize * u_gradient[i];
+      V[movie_id][i] = V[movie_id][i] - lrate * v_stepsize * v_gradient[i];
 		}
 
     if ((k & 0xFF) == 0) {
-      for (int i = 0; i < factors; avg_change += abs(u_step[i]) + abs(v_step[i]), i++);
+      for (int i = 0; i < factors; avg_change += abs(u_gradient[i]) + abs(v_gradient[i]), i++);
       iters_since_update++;
     }
 

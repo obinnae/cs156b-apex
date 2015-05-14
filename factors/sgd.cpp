@@ -14,7 +14,11 @@ float optimal_stepsize(const float * const * u,
                         Baseline *b) {
     // possible speedups:
     //  don't use "row" var, just reference v[movie_id][i]
+    //  or copy v[movie_id] over to a local array first
     //  remove += usage with floats
+    //  use smaller dynamically allocated arrays
+    //  remove declaration of grad_of_grad_matrix
+    //  combine 2nd and 3rd for loops
 
     // Optimal step size is determined by:
     //   k*gradient
@@ -38,14 +42,14 @@ float optimal_stepsize(const float * const * u,
     // where (*) is the dot product
     float row_times_gradient = 0;
     for (int i = 0; i < factor_length; i++)
-        row_times_gradient += row[i] * steps[i];
+        row_times_gradient += row[i] * u_gradient[i];
 
     for (int i = 0; i < factor_length; i++)
-        D[i] = row_times_gradient * row[i] + lambda / d->get_num_entries() * steps[i];
+        D[i] = row_times_gradient * row[i] + lambda * u_gradient[i];
 
     // Calculate numerator and denominator of k
     for (int i = 0; i < factor_length; i++) {
-        k_numer = k_numer + D[i] * steps[i];
+        k_numer = k_numer + D[i] * u_gradient[i];
         k_denom = k_denom + D[i] * D[i];
     }
 
