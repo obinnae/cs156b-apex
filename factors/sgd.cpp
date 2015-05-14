@@ -6,21 +6,22 @@
 
 float optimal_stepsize(const float * const * u,
                         const float * const * v,
-                        entry_t e,
-                        const DataAccessor *d,
-                        Baseline *b,
                         const int factor_length,
+                        int v_index,
+                        float *u_gradient,
                         float lambda,
-                        bool isU,
-                        float *steps) {
+                        const DataAccessor *d,
+                        Baseline *b) {
+    // possible speedups:
+    //  don't use "row" var, just reference v[movie_id][i]
+    //  remove += usage with floats
+
     // Optimal step size is determined by:
     //   k*gradient
     // where k is
     //   (D*gradient) / (D*D)
     // with D = (second derivative matrix)(gradient)
     // and (*) is the dot product
-
-    gradient(u, v, e, d, b, factor_length, lambda, isU, steps);
 
     float k;
     float k_numer = 0, k_denom = 0;
@@ -29,7 +30,7 @@ float optimal_stepsize(const float * const * u,
     float D[MAX_FACTORS];
 
     // Calculate second derivatives and put in matrix
-    const float * row = isU ? v[d->extract_movie_id(e)] : u[d->extract_user_id(e)];
+    const float * row = v[v_index];
     
     // Calculate D
     // It's easier to calculate D using the (equivalent) formula
@@ -55,27 +56,18 @@ float optimal_stepsize(const float * const * u,
 
     k = k_numer / k_denom;
 
-/*
-    if (d->extract_entry_index(e) % 1000000 == 0) {
-        std::cout << "k = " << k_numer << " / (" << k_denom << " + " << regularizer << ") = " << k << std::endl;
-    }*/
-
-    // Modify steps vector by multiplying by k
-    for (int i = 0; i < factor_length; i++)
-        steps[i] = steps[i] * k;
-
     return k;
 }
 
-float * gradient(const float * const * u,
+void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
                  int factor_length,
                  float lambda,
-                 bool isU,
-                 float *factor_gradient) {
+                 float *u_gradient,
+                 float *v_gradient) {
 
     /*
      * TODO: Change definition from Coordinate Gradient Descent
@@ -88,22 +80,6 @@ float * gradient(const float * const * u,
 
     float baseline_rating = (float) b->get_baseline(u_index, v_index);
 
-    const float * const * factor;
-    const float * const * non_factor;
-    int factor_i, nfactor_i;
-
-    if (isU) {
-        factor = u;
-        non_factor = v;
-        factor_i = u_index;
-        nfactor_i = v_index;
-    }
-    else {
-        factor = v;
-        non_factor = u;
-        factor_i = v_index;
-        nfactor_i = u_index;
-    }
         /*
          * Loop that follows calculates the error arising
          * from aproximating the rating using the factors
@@ -113,12 +89,11 @@ float * gradient(const float * const * u,
     for (int i = 0; i < factor_length; i++){
         error -= u[u_index][i] * v[v_index][i];
     }
-
-    for (int i = 0; i < factor_length; i++){
-        factor_gradient[i] = lambda * factor[factor_i][i] / d->get_num_entries() - non_factor[nfactor_i][i] * error;
-    }
     
-    return factor_gradient;
+    for (int i = 0; i < factor_length; i++){
+        u_gradient[i] = lambda * u[u_index][i] - v[v_index][i]*error;
+        v_gradient[i] = lambda * v[v_index][i] - u[u_index][i]*error;
+    }
 }
 
 float grad_of_grad(const float * row,

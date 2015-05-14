@@ -10,23 +10,22 @@
 // Stochastic gradient descent functions
 float optimal_stepsize(const float * const * u,
                         const float * const * v,
-                        entry_t e,
-                        const DataAccessor *d,
-                        Baseline *b,
                         const int factor_length,
+                        int v_index,
+                        float *u_gradient,
                         float lambda,
-                        bool isU,
-                        float *steps);
+                        const DataAccessor *d,
+                        Baseline *b);
 
-float * gradient(const float * const * u,
+void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
                  const int factor_length,
                  float lambda,
-                 bool isU,
-                 float *factor_gradient);
+                 float *u_gradient,
+                 float *v_gradient);
 
 float grad_of_grad(const float * row,
                    int index1,

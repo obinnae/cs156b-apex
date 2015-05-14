@@ -39,8 +39,8 @@ int get_compressed_data(char *infile, int *movies_per_user, int *entries, int nu
     entries[num_entries] = ((date-1)*NUM_RATINGS + rating)*num_movies + mov_id;
     num_entries++;
     
-    if (mov_id % 17000 == 0)
-      std::cout << user_id << " " << mov_id << std::endl;
+    if (num_entries % 1000000 == 0)
+      std::cout << line << std::endl;
   }
   input.close();
   
