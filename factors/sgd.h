@@ -5,15 +5,18 @@
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
-float * gradient(const float * const * u,
+
+#define MAX_FACTORS 200
+
+void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
                  const int factor_length,
                  float lambda,
-                 bool isU,
-                 float *factor_gradient);
+                 float *u_gradient,
+                 float *v_gradient);
 
 float * coordinateGradient(const float * const * u,
                            const float * const * v,
