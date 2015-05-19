@@ -5,6 +5,7 @@
  * This program uses the gradient calculations to update the latent factors.
  */
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
@@ -18,119 +19,91 @@ using namespace std;
 #define MAX_MOVIES 17770
 #define MAX_USERS 458293
 
+
 void initialize_latent_factors(int factors, float ** U, float ** V, int num_users, int num_movies) {
-	//initialize matrix elements to random numbers between 0 and 1
-	for(int i = 0; i < num_users; i++)
-		for (int j = 0; j < factors; j++)
-			U[i][j] = ((float) rand() / (RAND_MAX));
+  //initialize matrix elements to random numbers between 0 and 1
+  for(int i = 0; i < num_users; i++)
+    for (int j = 0; j < factors; j++)
+      U[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
 
-	for(int i = 0; i < num_movies; i++)
-		for (int j = 0; j < factors; j++)
-			V[i][j] = ((float) rand() / (RAND_MAX));
+  for(int i = 0; i < num_movies; i++)
+    for (int j = 0; j < factors; j++)
+      V[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
 
-/*	//prints out the matrix
-	for(int i = 0; i < num_users; i++)
-		for (int j = 0; j < factors; j++)
-			cout << "[" << i << "," << j << "]" << U[i][j];
-		cout << endl;
+/*  //prints out the matrix
+  for(int i = 0; i < num_users; i++)
+    for (int j = 0; j < factors; j++)
+      cout << "[" << i << "," << j << "]" << U[i][j];
+    cout << endl;
 
-	for(int i = 0; i < num_movies; i++)
-		for (int j = 0; j < factors; j++)
-			cout << "[" << i << "," << j << "]" << V[i][j];
-		cout << endl;
+  for(int i = 0; i < num_movies; i++)
+    for (int j = 0; j < factors; j++)
+      cout << "[" << i << "," << j << "]" << V[i][j];
+    cout << endl;
 */
 
 }
 void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int fold=-1){
-   
-    /* TODO update_latent_factors needs to support k-folds. Should run on entire data set if fold is -1 */
-	bool isU;
-	int index;
-	int movie_id, user_id;
-	float *step;
-	entry_t e; // Might not need anymore
-  entry_t * user_movie_entries = new entry_t[MAX_ENTRIES_PER_MOVIE];
-  int * non_factor_indexes = new int[MAX_ENTRIES_PER_MOVIE];
-  int num_non_factors;
-	
+  bool isU;
+
+  int index;
+  entry_t e;
+  int movie_id, user_id, rating;
+
+  float *step = new float[factors];
+  
   double avg_change = 0; // for printing out status updates
 
-	//Loop for the chosen number of epochs
-	for (int epoch = 0; epoch < epochs; epoch++) {
-    //for (int k = 0; k < d->get_num_users() + d->get_num_movies(); k++) {
-    for (int k = 0; k < d->get_num_users() + d->get_num_movies(); k++) {
+  time_t t1, t2; // time each epoch for informational purposes
 
-  		//randomly select U or V
-      int num_non_factors;
-	  	//isU = (rand() % 2) == 1;
-      
-      //std::cout << "Selecting a " << (isU?"user":"movie") << " to modify...\n";
-      if (k < d->get_num_users()){
-        //index = rand() % d->get_num_users();
-        //std::cout << "  Selected user " << index << std::endl;
-        isU = true;
-        index = k;
-        num_non_factors = d->get_user_entries(index, user_movie_entries);
-        //std::cout << "  Retrieved " << num_non_factors << " ratings from user " << index << std::endl;
-        for (int i=0; i < num_non_factors; i++){
-          non_factor_indexes[i]=d->extract_movie_id(user_movie_entries[i]);
-        }
-      }
-      else {
-        isU = false;
-        index = k - d->get_num_users();
-        //index = rand() % d->get_num_movies();
-        num_non_factors = d->get_movie_entries(index, user_movie_entries);
-        for (int i=0; i < num_non_factors; i++){
-          non_factor_indexes[i]=d->extract_user_id(user_movie_entries[i]);
-        }
-      }
-      //std::cout << "Updating " << (isU?"user ":"movie ") << index << std::endl;
-  		//randomly select one index i of matrix
-	  	// do {
-    // 		index = rand() % d->get_num_entries();
-  	 //  	e = d->get_entry(index);
-  	 //  } while (d->extract_rating(e) == 0); //Why this check?
+  //Loop for the chosen number of epochs
+  t1 = time(NULL);
+  for (int k = 0; k < d->get_num_entries(); k++) {
 
+    // randomly select U or V
+    isU = (rand() % 2) == 1;
+    
+    // Select entry index
+    index = k;
 
-      //user_id = d->extract_user_id(e);
-      //movie_id = d->extract_movie_id(e); // <== REVISIT and see if used anywhere besides sgd
+    // Check if entry is not in qual
+    e = d->get_entry(index);
+    rating = d->extract_rating(e);
+    if (rating == 0) continue;
 
-//      std::cout << "Training on rating " << index << ", (user_id, movie_id) = (" << user_id << "," << movie_id << ")\n";
+    // Extract entry information
+    user_id = d->extract_user_id(e);
+    movie_id = d->extract_movie_id(e);
 
-  		// calculate a gradient step (using Obi's code in sgd.cpp)
-	  	step = coordinateGradient(U, V, index, d, b, user_movie_entries, non_factor_indexes, num_non_factors, factors,lambda, isU);
+    // Calculate gradient
+    gradient(U, V, e, d, b, factors, lambda, isU, step);
 
-  		// take a gradient step
-	  	if(isU)
-	    {
-		    for(int i = 0; i < factors; i++)
-  				U[index][i] = U[index][i] - lrate * step[i];
-  		}
-  		else
-	  	{
-		  	for(int i = 0; i < factors; i++)
-			  	V[index][i] = V[index][i] - lrate * step[i];
-		  }
+    // take a gradient step
+    if(isU)
+    {
+      for(int i = 0; i < factors; i++)
+        U[user_id][i] = U[user_id][i] - lrate * step[i];
+    }
+    else
+    {
+      for(int i = 0; i < factors; i++)
+        V[movie_id][i] = V[movie_id][i] - lrate * step[i];
+    }
 
-      for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
+    for (int i = 0; i < factors; i++, avg_change += abs(step[i])) {}
 
-      if (k % 0x1FFF == 0x1FFF-1) {
-		  	std::cout << "Iteration " << (k+1)
-		  				<< ": Average |gradient| over last 8191 iterations: " << (avg_change/0x1FFF/factors) << std::endl;
-        avg_change = 0;
-		  	//std::cout << avg_change << " ";
-		  }
+    if (k % 0x1FFFFF == 0x1FFFFF-1) {
+      std::cout << "Iteration " << (k+1)
+            << ": Average |gradient| over last 2097151 iterations: " << (avg_change/0x1FFFFF/factors) << std::endl;
+      avg_change = 0;
+    }
 
-      delete[] step;
-      //delete[] non_factor_indexes;
+  }
+  t2 = time(NULL);
 
-	  }
-	}
-	std::cout << std::endl;
+  delete[] step;
 
-  delete[] user_movie_entries;
-  delete[] non_factor_indexes;
+  std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
 
 float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *d, Baseline *b, int fold=-1){
@@ -144,6 +117,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   entry_t e;
   int user_id, movie_id, rating;
   for (int i = 0; i < d->get_num_entries(); i++) {
+
     entry_t e = d->get_entry(i);
     rating = d->extract_rating(e);
     
@@ -164,35 +138,151 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       num_test_pts++;
     }
     
-    if (i % 10000000 == 0)
-      std::cout << (float)i/d->get_num_entries()*100 << "%: " << (error/num_test_pts) << "\n";
+    if (i % 10000000 == 9999999)
+      std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
     
   }
+  std::cout << "E_in = " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
   
   return sqrt(error / num_test_pts);
 }
 
-void run_matrix_factorization(int factors, char * data_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=1)
-{
-	// declare the number of epochs of SGD you want to do
-	// # epochs = # iters * # factors
+float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor *p, Baseline *b_p, int fold=-1){
+    /*
+     * Now passing in reference to DataAccessor and Baseline objects for probe dataset
+     * Uses these to get the actual ratings and baselines for predictions of probe dataset
+     * Changed the names in the signature just to make it clearer which dataset we are operating on
+     */
 
-	DataAccessor d;
-	d.load_data(data_path);
-	
-	Baseline b(&d); // Baseline instantiation
-	
-	int num_users = d.get_num_users();
-	int num_movies = d.get_num_movies();
+    /* calculates out of sample erorr (error of entries that are equal to fold) */
 
-  int fold;
-  int epoch; // current epoch
+    /* TODO: consider merging with calc_in_sample error, so error checking just does one pass */
+    float error = 0;
+    int num_test_pts = 0;
+
+    std::cout << "Calculating E_out...\n";
+
+    entry_t e;
+    int user_id, movie_id, rating;
+
+    for (int i = 0; i < p->get_num_entries(); i++) {
+
+        //if it's not the fold, then it's in-sample, so don't check
+      /*  if (p->get_validation_id(i) != fold){ // Change this to check from the probe file
+            continue;
+        }
+       */ 
+        entry_t e = p->get_entry(i);
+        rating = p->extract_rating(e);
+        
+        
+        // If not a qual entry then calculate and accumulate error
+        if (rating != 0) {
+            user_id = p->extract_user_id(e);
+            movie_id = p->extract_movie_id(e);
+            
+            // Increment error
+            float rating_error = 0;
+            for (int j = 0; j < num_factors; j++) {
+                rating_error += U[user_id][j] * V[movie_id][j];
+            }
+            rating_error -= rating - b_p->get_baseline(user_id, movie_id);
+            error += rating_error * rating_error;
+            
+            // Increment number of test points
+            num_test_pts++;
+        }
+
+        
+        if (i % 10000000 == 9999999)
+            std::cout << (float)i/p->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
+        
+    }
+    std::cout << "E_out: " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
+    
+    return sqrt(error / num_test_pts);
+}
+
+void single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
+  float old_error = 100; // a big number
+  float new_error;
+
+  initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
+
+  for (int epoch = 0; epoch < epochs; epoch++) {
+
+    update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
+    calc_in_sample_error(U, V, factors, d, b);
+    new_error = calc_out_sample_error(U, V, factors, p, b_p);
+
+    std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
+    
+    if (new_error > old_error) { // overfitting has occurred
+      std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
+      break;
+    }
+    old_error = new_error;
+  }
+}
+
+
+void k_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, int folds, DataAccessor *d, Baseline *b) {
 
   /* sum of errors at each epoch; init to all 0 */
   float *errors = new float[epochs];
-  for (epoch = 0; epoch < epochs; epoch++) {
+  for (int epoch = 0; epoch < epochs; epoch++) {
     errors[epoch] = 0;
   }
+
+  // Set number of validation sets in DataAccessor so validation IDs are sensible
+  d->set_num_validation_sets(folds);
+
+  // do matrix factorization <folds> times
+  for (int fold = 0; fold < folds; fold++){
+    initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
+    
+    for (int epoch = 0; epoch < epochs; epoch++){
+      update_latent_factors(U, V, d, b, factors, 1, lambda, lrate, fold);
+      errors[epoch] += calc_out_sample_error(U, V, factors, d, b, fold);
+
+      std::cout << "*** EPOCH " << epoch << " COMPLETE ***\n\n";
+    }
+  }
+
+  /* Find epoch with least total error.
+     This is the same as the epoch with the least average error */
+  int bestEpoch = 0;
+  for (int epoch = 0; epoch < epochs; epoch++){
+      if (errors[bestEpoch] > errors[epoch]){
+          bestEpoch = epoch;
+      }
+  }
+
+  // run factorization for best # of epochs
+  std::cout << "Best # epochs is" << (bestEpoch+1) << " epochs. Running factorization on full data set...\n";
+  //single_fold_factorization(U, V, factors, bestEpoch+1, lambda, lrate, d, b);
+  // Commented out because of signature mismatch and because right now the probe dataset is required
+
+}
+
+
+void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=-1)
+{ //Included probe path in signature
+
+  // declare the number of epochs of SGD you want to do
+  // # epochs = (# iters) / (# total entries in data file)
+
+  DataAccessor d;
+  d.load_data(data_path);
+
+  DataAccessor p; // Creating 2nd DataAccesor to manage probe data
+  p.load_data(probe_path);
+  
+  Baseline b(&d); // Baseline instantiation
+  Baseline b_p(&p); // Baselines for probe data
+  
+  int num_users = d.get_num_users();
+  int num_movies = d.get_num_movies();
 
   //declare and allocate memory for the latent factors matrices
   float ** U = new float *[num_users];
@@ -205,62 +295,60 @@ void run_matrix_factorization(int factors, char * data_path, int epochs, float l
     V[i] = new float[factors];
   }
 
-//  for (fold = 0; fold < folds; fold++){
-            
-    srand(time(NULL));
+  srand(time(NULL));
 
-    initialize_latent_factors(factors, U, V, num_users, num_movies);
-            
-    for (epoch = 0; epoch < epochs; epoch++){
-      update_latent_factors(U, V, &d, &b, factors, 1, lambda, lrate, fold);
-      std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n";
-//      errors[epoch] += calc_in_sample_error(U, V, factors, &d, &b, fold);
-    }
-    
-  // Calculate in-sample error
+  // calculate U and V
+  if (folds <= 1) {
+    single_fold_factorization(U, V, factors, epochs, lambda, lrate, &d, &p, &b, &b_p); // Added probe dataAccessor and Baseline object to call
+  } else {
+    k_fold_factorization(U, V, factors, epochs, lambda, lrate, folds, &d, &b);
+  }
 
-  float error = calc_in_sample_error(U, V, factors, &d, &b);
-
-  std::cout << "RMSE (in sample): " << error << std::endl;
-
-            
-//  }
-        
-        /* calculate average error across folds for each epoch */
-/*        int bestEpoch = 0;
-        for (epoch = 0; epoch < epochs; epoch++){
-            errors[epoch] /= folds;
-            if (errors[bestEpoch] > errors[epoch]){
-                bestEpoch = epoch;
-            }
-        }
-*/  
-  //create qual submission with best epoch
-        
+  // create qual submission using latent factors
   runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
+
+  // Clean up after yourself
+  for (int i = 0; i < num_users; i++)
+    delete[] U[i];
+  for (int i = 0; i < num_movies; i++)
+    delete[] V[i];
+  delete[] U;
+  delete[] V;
 
 }
 
 
 
 int main(int argc, char *argv[]) {
-    char *data_path, *qualPath, *outputPath;
+  char *data_path, *probe_path, *qualPath, *outputPath; //Added probe variable for reading in probe param
   int num_factors;
   int num_epochs;
   float lambda, lrate;
+  int num_folds;
   
-  if (argc != 8){
-      std::cout << "Usage: run_matrix_factorization <data-file> <num-factors> <num-epochs> <lambda> <learning-rate> <qual_path> <output-file-path>\n";
+  if (argc == 9) { // Changed Counts on argument length checks to accomodate for probe
+    // Also adjusted indices of arguments following probe
+    num_folds = -1;
+    qualPath = argv[7];
+    outputPath = argv[8];
+  } else if (argc == 10){
+    num_folds = atoi(argv[7]);
+    qualPath = argv[8];
+    outputPath = argv[9];
+  } else {
+    std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> [<#-folds>] <qual_path> <output-file-path>\n";
+    /*
+     * Modified usage message to clarify the extra command line arg
+     * Also renamed old data-file arg to differentiate between train-data and probe-data
+     */
     exit(1);
   }
   data_path = argv[1];
-  num_factors = atoi(argv[2]);
-  num_epochs = atoi(argv[3]);
-  lambda = atof(argv[4]);
-  lrate = atof(argv[5]);
-  
-  qualPath = argv[6];
-  outputPath = argv[7];
+  probe_path = argv[2];
+  num_factors = atoi(argv[3]); //Incremented indices of args since probe has been inserted after data_path
+  num_epochs = atoi(argv[4]);
+  lambda = atof(argv[5]);
+  lrate = atof(argv[6]);
 
 
   std::cout << "Running matrix factorization with the following parameters:\n"
@@ -268,9 +356,10 @@ int main(int argc, char *argv[]) {
       << "\tNumber of factors: " << num_factors << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
       << "\tLambda: " << lambda << std::endl
-      << "\tLearning rate: " << lrate << std::endl; 
+      << "\tLearning rate: " << lrate << std::endl
+      << "\tNumber of folds: " << num_folds << std::endl;
 
-  run_matrix_factorization(num_factors, data_path, num_epochs, lambda, lrate, qualPath, outputPath);
+  run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, qualPath, outputPath, num_folds);
 
   std::cout << "\nMatrix factorization finished!\n";
   

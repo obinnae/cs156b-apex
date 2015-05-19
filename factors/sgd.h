@@ -7,12 +7,13 @@
 
 float * gradient(const float * const * u,
                  const float * const * v, 
-                 const int index,
+                 entry_t e,
                  const DataAccessor * d,
                  Baseline *b,
                  const int factor_length,
                  float lambda,
-                 bool isU);
+                 bool isU,
+                 float *factor_gradient);
 
 float * coordinateGradient(const float * const * u,
                            const float * const * v,
@@ -24,6 +25,7 @@ float * coordinateGradient(const float * const * u,
                            const int num_non_factors,
                            const int factor_length,
                            float lambda,
-                           bool isU);
+                           bool isU,
+                           int fold = -1);
 
 #endif

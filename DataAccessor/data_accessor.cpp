@@ -13,8 +13,9 @@
 //       Exactly the same format as entry_compressed_t but in a numeric form for easier manipulation.
 //       Uses more than 6 bytes because long ints are bigger.
 //  4. entry_t
-//       Information on a complete entry in a four-int array. Takes 16 bytes.
-//       Quickest to access entry information.
+//       Information on a complete entry in a five-int array. Takes 20 bytes.
+//       Stores the user_id, movie_id, rating, date, and entry index for fast access.
+//       Quickest to access entry information but least space-efficient.
 
 
 DataAccessor::DataAccessor(int k) {
@@ -134,10 +135,10 @@ entry_t DataAccessor::get_entry(int user_id, int movie_id) const {
 }
 entry_t DataAccessor::get_entry(int index) const {
   if (index < 0 || index >= num_entries) {
-    return make_entry(-1, -1, -1, -1);
+    return make_entry(-1, -1, -1, -1, -1);
   }
   
-  return decompress_entry_val(entries[index]);
+  return decompress_entry_val(index, entries[index]);
 }
 
 // Retrieves all entries associated with this user, placing them in the user_entries array.
@@ -147,7 +148,7 @@ entry_t DataAccessor::get_entry(int index) const {
 int DataAccessor::get_user_entries(int user_id, entry_t *user_entries) const {
   int user_start = user_start_indices[user_id];
   for (int i = 0; i < entries_per_user[user_id]; i++) {
-    user_entries[i] = decompress_entry_val(entries[user_start + i]);
+    user_entries[i] = decompress_entry_val(user_start + i, entries[user_start + i]);
   }
   
   return entries_per_user[user_id];
@@ -163,7 +164,7 @@ int DataAccessor::get_movie_entries(int movie_id, entry_t *movie_entries) const 
   int *entry_indices = new int[num_entries]; // it can be around 10% faster to copy over the entry indices before looping, not sure why...
   memcpy(entry_indices, movie_entry_indices, num_entries*sizeof(int));
   for (int i = 0; i < num_entries; i++) {
-    movie_entries[i] = decompress_entry_val(entries[entry_indices[i]]);
+    movie_entries[i] = decompress_entry_val(entry_indices[i], entries[entry_indices[i]]);
   }
   delete[] entry_indices;
   
@@ -171,26 +172,32 @@ int DataAccessor::get_movie_entries(int movie_id, entry_t *movie_entries) const 
 }
 
 
-// Unwrap the entry_t object to get the user id, movie id, rating, or date.
+// Unwrap the entry_t object to get the entry index, user id, movie id, rating, or date.
 // If you will extract all four pieces of information, it's slightly faster to
 // extract them all at once with extract_all
-int DataAccessor::extract_user_id(entry_t entry) const {
+int DataAccessor::extract_entry_index(entry_t entry) const {
   return entry.x[0];
 }
-int DataAccessor::extract_movie_id(entry_t entry) const {
+int DataAccessor::extract_user_id(entry_t entry) const {
   return entry.x[1];
 }
-int DataAccessor::extract_rating(entry_t entry) const {
+int DataAccessor::extract_movie_id(entry_t entry) const {
   return entry.x[2];
 }
-int DataAccessor::extract_date(entry_t entry) const {
+int DataAccessor::extract_rating(entry_t entry) const {
   return entry.x[3];
 }
+int DataAccessor::extract_date(entry_t entry) const {
+  return entry.x[4];
+}
+int DataAccessor::extract_validation_id(entry_t entry) const {
+  return get_validation_id(entry);
+}
 void DataAccessor::extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const {
-  user_id = entry.x[0];
-  movie_id = entry.x[1];
-  rating = entry.x[2];
-  date = entry.x[3];
+  user_id = entry.x[1];
+  movie_id = entry.x[2];
+  rating = entry.x[3];
+  date = entry.x[4];
 }
 
 
@@ -229,7 +236,7 @@ int DataAccessor::get_validation_id(int user_id, int movie_id) const {
     return -1;
 }
 int DataAccessor::get_validation_id(entry_t entry) const {
-  return get_validation_id(extract_user_id(entry), extract_movie_id(entry));
+  return get_validation_id(extract_entry_index(entry));
 }
 
 // Randomize validation IDs
@@ -318,22 +325,23 @@ void DataAccessor::parse_entry_val(entry_compressed_t entry_val, int &user_id, i
 }
 
 // Convert between uncompressed and compressed entry forms
-entry_t DataAccessor::make_entry(int user_id, int movie_id, int rating, int date) const {
+entry_t DataAccessor::make_entry(int index, int user_id, int movie_id, int rating, int date) const {
   entry_t e;
-  e.x[0] = user_id;
-  e.x[1] = movie_id;
-  e.x[2] = rating;
-  e.x[3] = date;
+  e.x[0] = index;
+  e.x[1] = user_id;
+  e.x[2] = movie_id;
+  e.x[3] = rating;
+  e.x[4] = date;
 
   return e;
 }
-entry_t DataAccessor::decompress_entry_val(entry_compressed_t entry_val) const {
+entry_t DataAccessor::decompress_entry_val(int index, entry_compressed_t entry_val) const {
   int user_id, movie_id, rating, date;
   entry_t entry;
 
   parse_entry_val(entry_val, user_id, movie_id, rating, date);
 
-  return make_entry(user_id, movie_id, rating, date);
+  return make_entry(index, user_id, movie_id, rating, date);
 }
 entry_compressed_t DataAccessor::compress_entry(entry_t entry) const {
   int user_id, movie_id, rating, date;
