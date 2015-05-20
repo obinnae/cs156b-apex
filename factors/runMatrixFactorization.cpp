@@ -14,17 +14,21 @@ int *parseLine(string line){
     return data;
 }
 
-float  getResult(int *data, float **u, float **v, int k, Baseline *b){
+float  getResult(int *data, float **u, float **v, float ** w, int ** r, int k, Baseline *b){
     float sum = 0;
     for(int i = 0; i < k; i++){
         sum += u[data[0]][i] * v[data[1]][i];
     }
     sum += b->get_baseline(data[0], data[1]);
+    for (int i = 0; i < 10; i++)
+    {
+        sum+= 0.01 * w[data[1]][r[data[1]][i]];
+    }
     return sum;
 }
 
 
-void runMatrixFactorization(float ** u, float **v, int k, char * inputFile, char *outputFile, Baseline *b){
+void runMatrixFactorization(float ** u, float **v, float ** w, int ** r, int k, char * inputFile, char *outputFile, Baseline *b){
     ofstream outFile;
     ifstream inFile;
 
@@ -35,7 +39,7 @@ void runMatrixFactorization(float ** u, float **v, int k, char * inputFile, char
     // loop through data
     string line;
     while(getline(inFile, line)){
-	outFile << getResult(parseLine(line), u, v, k, b) << endl;
+	outFile << getResult(parseLine(line), u, v, w, r, k, b) << endl;
     }
 }
 
