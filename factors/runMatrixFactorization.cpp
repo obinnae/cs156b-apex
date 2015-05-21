@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cmath>
 #include "../baseline/baseline.h"
+#include "update_parameters.h"
+
 using namespace std;
 
 int *parseLine(string line){
@@ -25,14 +27,7 @@ float  getResult(int *data, float **u, float **v, float ** w, int ** r, int k, D
     int user_id = data[0];
     int movie_id = data[0];
 
-    float sum_ws = 0;
-    for (int j = 0; j < 10; j++)
-    {
-        entry_t e_j = d->get_entry(user_id, r[movie_id][j]);
-        int rating_j = d->extract_rating(e_j);
-        sum_ws += w[movie_id][r[movie_id][j]] * (rating_j - b->get_baseline(user_id, r[movie_id][j]));
-    }
-        sum+= (1/ sqrt(10)) *  0.01 * sum_ws;
+    sum+= (1/ sqrt(10)) *  0.01 * weightSum(user_id, movie_id, 10, w, r, d, b);
     return sum;
 }
 

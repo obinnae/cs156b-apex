@@ -29,5 +29,13 @@ void updateWeights(int user_index,
 				   float lambda,
 				   float error);
 
+float weightSum(int user_index,
+				int movie_index,
+				int k,
+				float ** w,
+				int ** r,
+				const DataAccessor * d,
+				Baseline * b
+				);
 
 #endif

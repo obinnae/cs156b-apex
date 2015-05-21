@@ -140,14 +140,7 @@ float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_f
         rating_error += U[user_id][j] * V[movie_id][j];
       }
 
-      float sum_ws = 0;
-      for (int j = 0; j < 10; j++) { //Adjust to use K when we finalize
-        entry_t e_j = d->get_entry(user_id, r[movie_id][j]);
-        int rating_j = d->extract_rating(e_j);
-        sum_ws += w[movie_id][r[movie_id][j]] * (rating_j - b->get_baseline(user_id, r[movie_id][j]));
-      }
-
-      rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.01 * sum_ws); //Adjust to use K
+      rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.01 * weightSum(user_id, movie_id, 10, w, r, d, b)); //Adjust to use K
 
 
       error += rating_error * rating_error;
@@ -212,7 +205,7 @@ float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_
               sum_ws += w[movie_id][r[movie_id][j]] * (rating_j - b_p->get_baseline(user_id, r[movie_id][j]));
             }
 
-            rating_error -= rating - b_p->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.01 * sum_ws); //Adjust to use k
+            rating_error -= rating - b_p->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.01 * weightSum(user_id, movie_id, 10, w, r, p, b_p)); //Adjust to use k
             error += rating_error * rating_error;
             
             // Increment number of test points

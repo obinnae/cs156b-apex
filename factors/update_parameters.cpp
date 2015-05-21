@@ -47,3 +47,29 @@ void updateWeights(int user_index,
 	}
 
 }
+
+float weightSum(int user_index,
+				int movie_index,
+				int k,
+				float ** w,
+				int ** r,
+				const DataAccessor * d,
+				Baseline * b
+				){
+
+	float sum_ws = 0;
+	for (int j = 0; j < k; j ++)
+	{
+		if (d->has_entry(user_index, r[movie_index][j]))
+		{
+			entry_t e = d->get_entry(user_index, r[movie_index][j]);
+			int rating_uj = d->extract_rating(e);
+			sum_ws += w[movie_index][r[movie_index][j]] * (rating_uj - b->get_baseline(user_index, r[movie_index][j]));
+		}
+		else
+		{
+			sum_ws+=0;
+		}
+	}
+	return sum_ws;
+}
