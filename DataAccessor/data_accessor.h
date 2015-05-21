@@ -99,6 +99,12 @@ public:
   
   // Get the index-th entry, in user-sorted-first order
   entry_t get_entry(int index) const;
+
+  // Gets a batch of entries beginning with start_index.
+  // The entries are returned in the batch array.
+  // Return value is number of entries in batch. This value is
+  // equal to max_entries unless the last entry was reached.
+  int get_entry_batch(int start_index, int max_entries, entry_t *batch) const;
   
   // Get all entries associated with the given user_id.
   // Entries are returned in the user_entries array.
