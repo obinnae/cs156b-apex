@@ -54,11 +54,11 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   		}
     }
     if ((batch_start & 0xFF) == 0) {
-      for (int i = 0; i < factors; avg_change += abs(u_step[i]) + abs(v_step[i]), i++);
+      for (int i = 0; i < factors; avg_change += fabs(u_step[i]) + fabs(v_step[i]), i++);
       iters_since_update++;
     }
 
-    if ((batch_start & 0x1FFFFF) == 0) {
+    if ((batch_start & 0x1FFFFFF) == 0) {
       std::cout << "Iteration " << (batch_start + 1)
             << ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
       avg_change = 0;
@@ -106,8 +106,8 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
       num_test_pts++;
     }
 
-    if (i % 10000000 == 9999999)
-      std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
+    //if (i % 10000000 == 9999999)
+    //  std::cout << (float)i/d->get_num_entries()*100 << "%: " << sqrt(error/num_test_pts) << "\n";
 
   }
   std::cout << "E_in = " << sqrt(error / num_test_pts) << " over " << num_test_pts << " test points.\n";
@@ -160,16 +160,18 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
     return sqrt(error / num_test_pts);
 }
 
-void single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
+float single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
   float old_error = 100; // a big number
   float new_error;
+
+  float in_sample_error;
 
   initialize_latent_factors(factors, U, V, d->get_num_users(), d->get_num_movies());
 
   for (int epoch = 0; epoch < epochs; epoch++) {
 
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
-    calc_in_sample_error(U, V, factors, d, b);
+    in_sample_error = calc_in_sample_error(U, V, factors, d, b);
     new_error = calc_out_sample_error(U, V, factors, p, b_p);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
@@ -180,6 +182,8 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
     }
     old_error = new_error;
   }
+
+  return new_error;
 }
 
 
