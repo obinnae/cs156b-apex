@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Validation ID for this entry: " << d.get_validation_id(entry) << " = " << d.get_validation_id(u, m) << std::endl;
 
   time_access_by_index(&d, num_indices);
-  time_access_by_user(&d, user_id);
-  time_access_by_movie(&d, movie_id);
-  time_random_access(&d, user_id, movie_id);
+  time_access_by_user(&d, user_id+1);
+  time_access_by_movie(&d, movie_id+1);
+  time_random_access(&d, user_id+1, movie_id+1);
 }
