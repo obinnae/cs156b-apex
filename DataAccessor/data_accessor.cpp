@@ -141,6 +141,15 @@ entry_t DataAccessor::get_entry(int index) const {
   return decompress_entry_val(index, entries[index]);
 }
 
+int DataAccessor::get_entry_batch(int start_index, int max_entries, entry_t *batch) const {
+  int entries_in_batch = (max_entries < num_entries - start_index) ? max_entries : (num_entries - start_index);
+  int entry_idx = start_index;
+  for (int i = 0; i < entries_in_batch; i++, entry_idx++) {
+    batch[i] = decompress_entry_val(entry_idx, entries[entry_idx]);
+  }
+  return entries_in_batch;
+}
+
 // Retrieves all entries associated with this user, placing them in the user_entries array.
 // Return value is the number of user entries.
 // Assumes user_entries array is large enough to hold all entries found. Note that

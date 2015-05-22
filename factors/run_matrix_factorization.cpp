@@ -19,6 +19,9 @@ using namespace std;
 #define MAX_MOVIES 17770
 #define MAX_USERS 458293
 
+// Using batches can save ~3-4seconds per epoch
+#define ENTRY_BATCH_SIZE 1048576
+
 
 void initialize_latent_factors(int factors, float ** U, float ** V, int num_users, int num_movies) {
 	//initialize matrix elements to random numbers between -.001 to .001
@@ -37,6 +40,8 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
   entry_t e;
   int movie_id, user_id, rating;
 
+  entry_t *entries = new entry_t[ENTRY_BATCH_SIZE];
+
 	float *u_step = new float[factors];
   float *v_step = new float[factors];
 
@@ -45,41 +50,48 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
 
   time_t t1, t2; // time each epoch for informational purposes
 
-  //Loop for the chosen number of epochs
+  //Loop for the chosen number of epochs; takes 47-48 seconds @ 10 factors on train.cdta
   t1 = time(NULL);
-  for (int k = 0; k < d->get_num_entries(); k++) {
-    // Select entry index
-    index = k;
+  for (int batch_start = 0; batch_start < d->get_num_entries(); batch_start = batch_start + ENTRY_BATCH_SIZE) {
+    int num_entries = d->get_entry_batch(batch_start, ENTRY_BATCH_SIZE, entries);
+    for (int k = 0; k < num_entries; k++) {
+    //for (int k = 0; k < d->get_num_entries(); k++) {
+      // Select entry index
+      //index = k;
 
-    // Don't need to check if rating in qual because qual is a separate data file
-    // Extract entry information
-    e = d->get_entry(index);
-    rating = d->extract_rating(e);
-    user_id = d->extract_user_id(e);
-    movie_id = d->extract_movie_id(e);
+      // Don't need to check if rating in qual because qual is a separate data file
+      // Extract entry information
+      //e = d->get_entry(index);
+      e = entries[k];
+      user_id = d->extract_user_id(e);
+      movie_id = d->extract_movie_id(e);
 
-    // Calculate gradient
-    gradient(U, V, e, d, b, factors, lambda, u_step, v_step);
+      // Calculate gradient
+      gradient(U, V, e, d, b, factors, lambda, u_step, v_step); // takes ~27 seconds per epoch @ 10 factors on train.cdta
 
-		// take a gradient step
-	  for(int i = 0; i < factors; i++) {
-			U[user_id][i] = U[user_id][i] - lrate * u_step[i];
-      V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
-		}
-
-    if ((k & 0xFF) == 0) {
+  		// take a gradient step
+  	  for(int i = 0; i < factors; i++) { // loop takes 13-14 seconds per epoch @ 10 factors on train.cdta
+  			U[user_id][i] = U[user_id][i] - lrate * u_step[i];
+        V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
+  		}
+    }
+    if ((batch_start & 0xFF) == 0) {
       for (int i = 0; i < factors; avg_change += abs(u_step[i]) + abs(v_step[i]), i++);
       iters_since_update++;
     }
 
-    if ((k & 0x1FFFFF) == 0) {
-	  	std::cout << "Iteration " << (k+1)
-	  				<< ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
+    if ((batch_start & 0x1FFFFF) == 0) {
+      std::cout << "Iteration " << (batch_start + 1)
+            << ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
       avg_change = 0;
       iters_since_update = 0;
-	  }
+    }
   }
   t2 = time(NULL);
+
+  delete[] u_step;
+  delete[] v_step;
+  delete[] entries;
 
   std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
@@ -253,15 +265,21 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
   int num_users = d.get_num_users();
   int num_movies = d.get_num_movies();
 
-  //declare and allocate memory for the latent factors matrices
+  // Declare and allocate memory for latent factor matrices
+  // We allocate an entire block of memory for the two matrices so that
+  // cache misses are reduced.
+  float *factors_mem = new float[(num_users + num_movies) * factors];
+
+  // Declare and allocate memory for easier access into the latent factor matrices
+  // This allows factors to be accessed in the same way as before.
   float ** U = new float *[num_users];
   for(int i = 0; i < num_users; i++) {
-    U[i] = new float[factors];
+    U[i] = factors_mem + i * factors;
   }
 
   float ** V = new float *[num_movies];
   for(int i = 0; i < num_movies; i++) {
-    V[i] = new float[factors];
+    V[i] = factors_mem + (i + num_users) * factors;
   }
 
   srand(time(NULL));
@@ -277,12 +295,9 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
   runMatrixFactorization(U, V, factors, qualPath, outputPath, &b);
 
   // Clean up after yourself
-  for (int i = 0; i < num_users; i++)
-    delete[] U[i];
-  for (int i = 0; i < num_movies; i++)
-    delete[] V[i];
   delete[] U;
   delete[] V;
+  delete[] factors_mem;
 
 }
 
