@@ -180,7 +180,7 @@ int DataAccessor::get_movie_entries(int movie_id, entry_t *movie_entries) const 
   int movie_start = movie_start_indices[movie_id];
   int num_entries = entries_per_movie[movie_id];
   int *entry_indices = new int[num_entries]; // it can be around 10% faster to copy over the entry indices before looping, not sure why...
-  memcpy(entry_indices, movie_entry_indices, num_entries*sizeof(int));
+  memcpy(entry_indices, movie_entry_indices + movie_start, num_entries*sizeof(int));
   for (int i = 0; i < num_entries; i++) {
     movie_entries[i] = decompress_entry_val(entry_indices[i], entries[entry_indices[i]]);
   }
