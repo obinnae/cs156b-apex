@@ -64,13 +64,13 @@ float optimize_lambda(float **U, float **V, int factors, int epochs, float lambd
     float low_lambda = lambda / ratio;
 
     std::cout << "\n*** Running mf with lambda = " << lambda << " / " << ratio << " = " << low_lambda << std::endl;
-    float e_ll = single_fold_factorization(U, V, factors, 1, low_lambda, lrate, d, d_p, b, b_p);
+    float e_ll = single_fold_factorization(U, V, factors, 5, low_lambda, lrate, d, d_p, b, b_p);
 
     std::cout << "\n*** Running mf with lambda = " << lambda << std::endl;
-    float e_ml = single_fold_factorization(U, V, factors, 1, lambda, lrate, d, d_p, b, b_p);
+    float e_ml = single_fold_factorization(U, V, factors, 5, lambda, lrate, d, d_p, b, b_p);
 
     std::cout << "\n*** Running mf with lambda = " << lambda << " * " << ratio << " = " << high_lambda << std::endl;
-    float e_hl = single_fold_factorization(U, V, factors, 1,  high_lambda, lrate, d, d_p, b, b_p);
+    float e_hl = single_fold_factorization(U, V, factors, 5,  high_lambda, lrate, d, d_p, b, b_p);
 
     /*if (e_ll < e_ml && e_ll < e_hl) {
       lambda = low_lambda;

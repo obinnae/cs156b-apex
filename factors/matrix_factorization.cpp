@@ -173,13 +173,6 @@ float single_fold_factorization(float **U, float **V, int factors, int epochs, f
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     in_sample_error = calc_in_sample_error(U, V, factors, d, b);
     new_error = calc_out_sample_error(U, V, factors, p, b_p);
-
-    //std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
-    
-    if (new_error > old_error) { // overfitting has occurred
-      std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
-      break;
-    }
     old_error = new_error;
   }
 
@@ -198,7 +191,7 @@ void k_fold_factorization(float **U, float **V, int factors, int epochs, float l
   }
 
   // Set number of validation sets in DataAccessor so validation IDs are sensible
-  d->set_num_validation_sets(folds);
+  //d->set_num_validation_sets(folds);
 
   // do matrix factorization <folds> times
   for (int fold = 0; fold < folds; fold++){

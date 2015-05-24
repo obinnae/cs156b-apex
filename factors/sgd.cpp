@@ -42,7 +42,7 @@ void gradient(const float * const * u,
     }
 }
 
-
+/*
 float * coordinateGradient(const float * const * u,
                            const float * const * v,
                            const int index,
@@ -88,10 +88,7 @@ float * coordinateGradient(const float * const * u,
     }
 
     for (int j = 0; j < num_non_factors; j++){ //Need to find a way to only iterate through available vals
-        /*
-         * Loop that follows calculates the error arrising
-         * from aproximating the rating using the factors
-         */
+        
         entry_t entry = user_movie_entries[j];
         int rating = d->extract_rating(entry);
 
@@ -99,12 +96,12 @@ float * coordinateGradient(const float * const * u,
         if (rating == 0 || d->get_validation_id(entry) == fold) continue;
         
         baseline_rating = b->get_baseline(d->extract_user_id(entry), d->extract_movie_id(entry));
-        /*if (isU) {
+        if (isU) {
             baseline_rating = (float) b->get_baseline(index, non_factor_indexes[j]);
         }
         else {
             baseline_rating = (float) b->get_baseline(non_factor_indexes[j], index);
-        }*/
+        }
 
         float error = rating - baseline_rating;
         for (int i = 0; i < factor_length; i++){
@@ -122,4 +119,4 @@ float * coordinateGradient(const float * const * u,
     }
 
     return factor_gradient;
-}
+}*/
