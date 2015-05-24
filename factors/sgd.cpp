@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "sgd.h"
 #include "../DataAccessor/data_accessor.h"
 #include "../baseline/baseline.h"
@@ -55,14 +57,14 @@ float * gradient(const float * const * u,
         error -= u[u_index][i] * v[v_index][i];
     }
 
-    error -= weightSum(u_index, v_index, 10, w, r, d, b);
+    error -= (1/ sqrt(10)) *  0.001 *  weightSum(u_index, v_index, 10, w, r, d, b);
 
     //UPDATE Ws now
 
     // Make this k variable
     int * movie_indexes = r[v_index];
 
-    updateWeights(u_index, 10, v_index, movie_indexes, w, d, b, 0.01 , lambda, error);
+    updateWeights(u_index, 10, v_index, movie_indexes, w, d, b, 0.001 , lambda, error);
 
     /*for (int i = 0; i < factor_length; i++){
     	main_term[i] = non_factor[nfactor_i][i] * error;

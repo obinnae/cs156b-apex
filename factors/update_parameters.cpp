@@ -39,11 +39,15 @@ void updateWeights(int user_index,
 				   float lambda,
 				   float error){
 
-	for (int j=0; j<k; j++){
-		entry_t e = d->get_entry(user_index, movie_index);
-		int rating = d->extract_rating(e);
-		float w_new = w[movie_index][j] + rate *( (1/ sqrt(k)) * error * (rating - b->get_baseline(user_index, movie_indexes[j])) -lambda * w[movie_index][j] );
-		w[movie_index][j] = w_new;
+	for (int j = 0; j < k; j++){
+		if (d-> has_entry(user_index, movie_indexes[j]))
+		{
+			entry_t e = d->get_entry(user_index, movie_index);
+			int rating = d->extract_rating(e);
+			//float rating_less_baseline = rating - b->get_baseline(user_index, movie_indexes[j]);
+			float w_new = w[movie_index][j] + rate *( (1/ sqrt(k)) * error * (rating - b->get_baseline(user_index, movie_indexes[j])) -lambda * w[movie_index][j] );
+			w[movie_index][j] = w_new;
+		}
 	}
 
 }
@@ -64,11 +68,7 @@ float weightSum(int user_index,
 		{
 			entry_t e = d->get_entry(user_index, r[movie_index][j]);
 			int rating_uj = d->extract_rating(e);
-			sum_ws += w[movie_index][r[movie_index][j]] * (rating_uj - b->get_baseline(user_index, r[movie_index][j]));
-		}
-		else
-		{
-			sum_ws+=0;
+			sum_ws += w[movie_index][j] * (rating_uj - b->get_baseline(user_index, r[movie_index][j]));
 		}
 	}
 	return sum_ws;

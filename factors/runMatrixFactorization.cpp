@@ -7,7 +7,7 @@
 
 using namespace std;
 
-int *parseLine(string line){
+int * parseLine(string line){
     int *data = new int [2];
     int sep1, sep2;
     sep1 = line.find_first_of(' ');
@@ -17,22 +17,24 @@ int *parseLine(string line){
     return data;
 }
 
-float  getResult(int *data, float **u, float **v, float ** w, int ** r, int k, DataAccessor *d, Baseline *b){
-    float sum = 0;
-    for(int i = 0; i < k; i++){
-        sum += u[data[0]][i] * v[data[1]][i];
-    }
-    sum += b->get_baseline(data[0], data[1]);
-
+float getResult(int *data, float **u, float **v, float ** w, int ** r, int k, DataAccessor *d, Baseline *b){
+    
     int user_id = data[0];
-    int movie_id = data[0];
+    int movie_id = data[1];
+    float sum = 0;
 
-    sum+= (1/ sqrt(10)) *  0.01 * weightSum(user_id, movie_id, 10, w, r, d, b);
+    for(int i = 0; i < k; i++){
+        sum += u[user_id][i] * v[movie_id][i];
+    }
+
+    sum += b->get_baseline(user_id, movie_id);
+
+    sum+= (1/ sqrt(10)) *  0.001 * weightSum(user_id, movie_id, 10, w, r, d, b);
     return sum;
 }
 
 
-void runMatrixFactorization(float ** u, float **v, float ** w, int ** r, int k, char * inputFile, char *outputFile, DataAccessor * d, Baseline *b){
+void runMatrixFactorization(float ** u, float ** v, float ** w, int ** r, int k, char * inputFile, char * outputFile, DataAccessor * d, Baseline *b){
     ofstream outFile;
     ifstream inFile;
 
