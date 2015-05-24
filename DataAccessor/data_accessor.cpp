@@ -445,9 +445,4 @@ void DataAccessor::calc_movie_info() {
   }
   
   delete[] entry_count_per_movie;
-}y_count_per_movie[m]++;
-    }
-  }
-  
-  delete[] entry_count_per_movie;
 }
