@@ -91,8 +91,8 @@ public:
   int get_num_entries() const;
   int get_num_users() const;
   int get_num_movies() const;
-  int get_num_user_entries() const;
-  int get_num_movie_entries() const;
+  int get_num_user_entries(int user_id) const;
+  int get_num_movie_entries(int movie_id) const;
   
   bool has_entry(int user_id, int movie_id) const;
   
