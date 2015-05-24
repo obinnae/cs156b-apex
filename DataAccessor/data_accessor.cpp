@@ -120,6 +120,15 @@ int DataAccessor::get_num_users() const {
 int DataAccessor::get_num_movies() const {
   return num_movies;
 }
+// Returns the number of entries associated with the given user
+int DataAccessor::get_num_user_entries(int user_id) const {
+  return entries_per_user[user_id];
+}
+// Returns the number of entries associated with the given movie
+int DataAccessor::get_num_movie_entries(int movie_id) const {
+  return entries_per_movie[movie_id];
+}
+
 
 // Returns true if the entry has been loaded and false otherwise.
 bool DataAccessor::has_entry(int user_id, int movie_id) const {
