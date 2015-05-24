@@ -53,7 +53,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
         V[movie_id][i] = V[movie_id][i] - lrate * v_step[i];
   		}
     }
-    if ((batch_start & 0xFF) == 0) {
+    /*if ((batch_start & 0xFF) == 0) {
       for (int i = 0; i < factors; avg_change += fabs(u_step[i]) + fabs(v_step[i]), i++);
       iters_since_update++;
     }
@@ -63,7 +63,7 @@ void update_latent_factors(float ** U, float ** V, DataAccessor * d, Baseline *b
             << ": Average |gradient| since last update: " << (avg_change/iters_since_update/factors/2) << std::endl;
       avg_change = 0;
       iters_since_update = 0;
-    }
+    }*/
   }
   t2 = time(NULL);
 
@@ -80,7 +80,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   float error = 0;
   int num_test_pts = 0;
 
-  std::cout << "Calculating E_in...\n";
+  //std::cout << "Calculating E_in...\n";
 
   entry_t e;
   int user_id, movie_id, rating;
@@ -126,7 +126,7 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
     float error = 0;
     int num_test_pts = 0;
 
-    std::cout << "Calculating E_out...\n";
+    //std::cout << "Calculating E_out...\n";
 
     entry_t e;
     int user_id, movie_id, rating;
@@ -174,7 +174,7 @@ float single_fold_factorization(float **U, float **V, int factors, int epochs, f
     in_sample_error = calc_in_sample_error(U, V, factors, d, b);
     new_error = calc_out_sample_error(U, V, factors, p, b_p);
 
-    std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
+    //std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
     
     if (new_error > old_error) { // overfitting has occurred
       std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
