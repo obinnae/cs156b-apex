@@ -255,6 +255,54 @@ int BS_index (float new_coeff,
  * index = index gotten from using BS_index
  */
 
+ int getIntersection(const int const * major,
+ 					 int size_major,
+ 					 const int const * minor,
+ 					 int size_minor,
+ 					 int * intersection_a,
+ 					 int intersection_b)
+ {
+ 	int * a;
+ 	int * b;
+ 	int intersection_size;
+ 	int longer;
+
+ 	if (size_major < size_minor)
+ 	{
+ 		a = major;
+ 		b = minor;
+ 		longer = size_minor;
+ 	}
+ 	else
+ 	{
+ 		a = minor;
+ 		b = minor;
+ 		longer = size_major;
+ 	}
+
+ 	int j = 0;
+
+ 	for (int i = 0; i < longer ; i ++)
+	{
+		if (a[j] < b[i])
+		{
+			j+=1;
+		}
+		else
+		{
+			if (a[j]==b[i])
+			{
+				intersection_a[instersection_size] = j;
+				intersection_b[instersection_size] = i;
+				printf("%d\n", a[j]);
+				instersection_size +=1;
+				j+=1;
+			}
+		}
+	}
+
+ }
+
  void reorderCoeffs (int index,
  					 float * top_k_coeffsi,
  					 int k,
