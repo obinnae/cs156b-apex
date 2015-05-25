@@ -137,7 +137,7 @@ float calc_in_sample_error(float **U, float **V, int num_factors, DataAccessor *
   return sqrt(error / num_test_pts);
 }
 
-float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor *p, Baseline *b_p, int fold=-1){
+float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor *p, Baseline * b, int fold=-1){
     /*
      * Now passing in reference to DataAccessor and Baseline objects for probe dataset
      * Uses these to get the actual ratings and baselines for predictions of probe dataset
@@ -166,7 +166,7 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
       for (int j = 0; j < num_factors; j++) {
           rating_error += U[user_id][j] * V[movie_id][j];
       }
-      rating_error -= rating - b_p->get_baseline(user_id, movie_id);
+      rating_error -= rating - b->get_baseline(user_id, movie_id);
       error += rating_error * rating_error;
 
       // Increment number of test points
@@ -182,7 +182,7 @@ float calc_out_sample_error(float **U, float **V, int num_factors, DataAccessor 
     return sqrt(error / num_test_pts);
 }
 
-void single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
+void single_fold_factorization(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b) {
   float old_error = 100; // a big number
   float new_error;
 
@@ -192,7 +192,7 @@ void single_fold_factorization(float **U, float **V, int factors, int epochs, fl
 
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     calc_in_sample_error(U, V, factors, d, b);
-    new_error = calc_out_sample_error(U, V, factors, p, b_p);
+    new_error = calc_out_sample_error(U, V, factors, p, b);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
     
@@ -263,7 +263,7 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
   qual.load_data(qual_path);
   
   Baseline b(&d); // Baseline instantiation
-  Baseline b_p(&p); // Baselines for probe data
+  //Baseline b_p(&p); // Baselines for probe data
   
   int num_users = d.get_num_users();
   int num_movies = d.get_num_movies();
@@ -289,7 +289,7 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   // calculate U and V
   if (folds <= 1) {
-    single_fold_factorization(U, V, factors, epochs, lambda, lrate, &d, &p, &b, &b_p); // Added probe dataAccessor and Baseline object to call
+    single_fold_factorization(U, V, factors, epochs, lambda, lrate, &d, &p, &b); // Added probe dataAccessor and Baseline object to call
   } else {
     k_fold_factorization(U, V, factors, epochs, lambda, lrate, folds, &d, &b);
   }
