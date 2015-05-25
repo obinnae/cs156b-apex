@@ -44,8 +44,8 @@ void calc_factor_gradient(float *corr_matrix, float *factor_matrix, float *lambd
   float error;
   float *i_row, *j_row;
 
-  i_row = factor_matrix + i * MAX_MOVIES;
-  j_row = factor_matrix + j * MAX_MOVIES;
+  i_row = factor_matrix + i * num_factors;
+  j_row = factor_matrix + j * num_factors;
 
   // Calculate difference between correlation value and the prediction
   error = corr_matrix[i * MAX_MOVIES + j];
