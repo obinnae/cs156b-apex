@@ -53,6 +53,8 @@ void calc_blend_weights(int num_files, char **blend_files, DataAccessor *probe_d
 
     float old_weight = blend_new_estimates(old_estimates, new_estimates, probe_data);
 
+    std::cout << "Weight calculated for " << blend_files[i] << ": " << (1-old_weight) << std::endl;
+
     for (int j = 0; j < i; j++)
       weights[j] *= old_weight;
     weights[i] = 1 - old_weight;
