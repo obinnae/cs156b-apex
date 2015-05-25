@@ -86,7 +86,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
   d.load_data(data_path);
   
   Baseline b(&d, BASELINE_ZERO);
-  //Baseline user_avgs(&d, BASELINE_USER_AVG);
+  Baseline user_avgs(&d, BASELINE_USER_AVG);
 
   entry_t *user_entries = new entry_t[MAX_ENTRIES_PER_USER];
   entry_t e;
@@ -118,11 +118,11 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
     for (int idx1 = 0; idx1 < num_user_entries; idx1++) {
       e1 = user_entries[idx1];
       m1 = d.extract_movie_id(e1);
-      r1 = d.extract_rating(e1) - b.get_baseline(u, m1);
+      r1 = d.extract_rating(e1) - user_avgs.get_baseline(u, m1);
       for (int idx2 = idx1 + 1; idx2 < num_user_entries; idx2++) {
         e2 = user_entries[idx2];
         m2 = d.extract_movie_id(e2);
-        r2 = d.extract_rating(e2) - b.get_baseline(u, m2);
+        r2 = d.extract_rating(e2) - user_avgs.get_baseline(u, m2);
 
         idx = m1 * MAX_MOVIES + m2;
         dot_prods[idx] += r1 * r2;
