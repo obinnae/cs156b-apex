@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
   char *probe_outfile, *qual_outfile;
   
   if (argc != 10) {
-    std::cout << "Usage: read_correlation <correlation-file> <num-factors> <lrate> <num-epochs> <train-data> <probe-data> <qual-data> <probe-output> <qual_output>\n";
+    std::cout << "Usage: genre_predictions <correlation-file> <num-factors> <lrate> <num-epochs> <train-data> <probe-data> <qual-data> <probe-output> <qual_output>\n";
     /*
      * Modified usage message to clarify the extra command line arg
      * Also renamed old data-file arg to differentiate between train-data and probe-data
