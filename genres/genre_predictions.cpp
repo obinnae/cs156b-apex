@@ -119,6 +119,7 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
 void do_matrix_factorization(float *corr_matrix, float *factor_matrix, int num_factors, float lrate, int num_epochs) {
   float *lambdas = new float[MAX_MOVIES];
 
+  std::cout << "Initializing factor matrix...\n";
   initialize_matrix(factor_matrix, lambdas, num_factors);
 
   for (int e = 0; e < num_epochs; e++) {
@@ -204,11 +205,16 @@ void genre_predictions(float *corr_matrix, int num_factors, float lrate, int num
   float *factor_matrix = new float[MAX_MOVIES * num_factors];
   float *user_prefs = new float[MAX_USERS * num_factors];
 
+  std::cout << "Performing matrix factorization\n";
   do_matrix_factorization(corr_matrix, factor_matrix, num_factors, lrate, num_epochs);
 
+  std::cout << "Calculating user preferences\n";
   calc_user_prefs(factor_matrix, user_prefs, num_factors, train_data, b);
 
+  std::cout << "Outputting probe predictions\n";
   calc_predictions(factor_matrix, user_prefs, num_factors, probe_data, b, probe_out);
+
+  std::cout << "Outputting qual predictions\n";
   calc_predictions(factor_matrix, user_prefs, num_factors, qual_data, b, qual_out);
 
   delete[] factor_matrix;
@@ -260,14 +266,19 @@ int main(int argc, char *argv[]) {
 
   DataAccessor train_data, probe_data, qual_data;
 
+  std::cout << "Loading data files...\n";
   train_data.load_data(train_infile);
   probe_data.load_data(probe_infile);
   qual_data.load_data(qual_infile);
+  std::cout << "Loaded!\n\n";
 
   Baseline b(&train_data, BASELINE_USER_AVG);
 
+  std::cout << "Loading correlation file...\n";
   read_correlation_file(correlation_file, correlation_matrix);
+  std::cout << "Loaded!\n\n";
 
+  std::cout << "Beginning genre prediction calculations\n";
   genre_predictions(correlation_matrix, num_factors, lrate, num_epochs, &train_data, &probe_data, &qual_data, &b, probe_outfile, qual_outfile);
 
   delete[] correlation_matrix;
