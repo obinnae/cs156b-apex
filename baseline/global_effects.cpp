@@ -238,6 +238,8 @@ float time_elapsed_movie(int user_id, int movie_id, DataAccessor * d) {
 	return std::sqrt(rating_date - first_date);
 }
 
+
+
 //find the user x time theta values
 int find_theta_user(int user_id, float * r, DataAccessor * d, bool movie_time) {
  	entry_t * user_entries = new entry_t[MAX_ENTRIES_PER_USER];
@@ -318,7 +320,7 @@ void update_residuals_x(float * r, float * theta, bool movie_effect, bool movie_
 	}
 }
 
-void update_test_ratings(float * test_ratings, DataAccessor * d, DataAccessor * d2, bool movie_time){
+void update_test_ratings(float * test_ratings, float * theta, DataAccessor * d, DataAccessor * d2, bool movie_time, int num_probes){
 	int user_index;
 	int movie_index;
 	int curr_date;
@@ -326,17 +328,17 @@ void update_test_ratings(float * test_ratings, DataAccessor * d, DataAccessor * 
 	float * x = new float[num_probes];
  	for(int i = 0; i < num_probes; i++){
  		// find the date of of the movie rated by user
- 		curr_entry = d2.get_entry(i);
- 		curr_date = d2.extract_date(curr_entry);
- 		user_index = d2.extract_user_id;
- 		movie_index = d2.extract_movie_id;
+ 		curr_entry = d2->get_entry(i);
+ 		curr_date = d2->extract_date(curr_entry);
+ 		user_index = d2->extract_user_id(curr_entry);
+ 		movie_index = d2->extract_movie_id(curr_entry);
  		if(movie_time){
-			x[i] = std::sqrt(curr_date - first_movie_date(movie_index, &d));
+			x[i] = std::sqrt(curr_date - first_movie_date(movie_index, d));
  		}
  		else{
- 			x[i] = std::sqrt(curr_date - first_user_date(user_index, &d));
+ 			x[i] = std::sqrt(curr_date - first_user_date(user_index, d));
  		}
- 		test_ratings[i] = test_ratings[i] + theta_3[user_index] * x[i];
+ 		test_ratings[i] = test_ratings[i] + theta[user_index] * x[i];
  		delete[] x;
  	}
 }
@@ -454,7 +456,7 @@ int main() {
 	rmse = evaluate_ratings(probe_ratings, test_ratings, num_probes);
 	std::cout << rmse << endl;
 
-    /*
+    	/*
 	//print theta_2 to file
 	outputfile.open("theta_2.dta");
 	for(int i = 0; i < MAX_USERS; i++)
@@ -497,7 +499,7 @@ int main() {
  	std::cout<< "Updated the residuals" << endl;
 
  	//update test_ratings to include the user x time(user)^(1/2) effect
- 	update_test_ratings(test_ratings, &d, &d2, false);
+ 	update_test_ratings(test_ratings, theta_3, &d, &d2, false, num_probes);
  	std::cout<< "Updated the test ratings" << endl;
 
  	//compare the test ratings to the probe ratings
@@ -518,12 +520,15 @@ int main() {
  		theta_4[i] = find_theta_user(i, r, &d, true);
  		theta_4[i] = (theta_4[i] * user_freq[i])/(alpha_4 + movie_freq[i]);
  	}
+	std::cout<< "Generated the theta values" << endl;
 
  	//update the residuals
  	update_residuals_x(r, theta_4, false, true, num_entries, &d);
+	std::cout<< "Updated the residuals" << endl;
 
  	//update test_ratings to include the user x time(movie)^(1/2) effect
- 	update_test_ratings(test_ratings, &d, &d2, true);
+ 	update_test_ratings(test_ratings, theta_4, &d, &d2, true, num_probes);
+	std::cout<< "Updated the test ratings" << endl;
 
  	//compare the test ratings to the probe ratings
  	rmse = evaluate_ratings(probe_ratings, test_ratings, num_probes);
@@ -539,7 +544,6 @@ int main() {
 
  	//find theta_5 by looping through all the movies
  	float * theta_5 = new float[MAX_MOVIES];
- 	for(int i = 0; i < MAX_MOVIES)
 
  	/*******************************************
  	* Effect 6: Movie x Time(user)^(1/2)
