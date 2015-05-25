@@ -146,7 +146,7 @@ void calc_correlation_matrix(float ** pearson_coeff,
 
   time_t t1= time(NULL);
 
-  for (int u = 0; u < num_users; u++) {
+  for (int u = 0; u < 1000; u++) {
     int num_user_entries = d->get_user_entries(u, user_entries);
 
     int idx;
@@ -385,12 +385,12 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < num_movies; i++)
     {
-    	for (int j; j < num_neighbors; j++)
+    	for (int j = 0; j < num_neighbors; j++)
     	{
     		int ind = neighbor_index[i][j];
     		coeffsFile << ind << " ";
     	}
-    	coeffsFile << "\n";
+    	coeffsFile << endl;
 
     }
     coeffsFile.close();
