@@ -82,7 +82,7 @@ void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAcc
 
   //Loop for the chosen number of epochs
 
-  for (int k = 0; k < 10; k++) {
+  for (int k = 0; k < d->get_num_entries(); k++) {
 
     // randomly select U or V
     isU = (rand() % 2) == 1;
@@ -241,15 +241,15 @@ void single_fold_factorization(float **U, float **V, float ** w, int ** r, int f
 
     update_latent_factors(U, V, w, r, d, b,factors, 1, lambda, lrate, num_neighbors);
     //calc_in_sample_error(U, V, w, r, factors, num_neighbors, d, b);
-    //new_error = calc_out_sample_error(U, V, w, r, factors, num_neighbors, p, b);
+    new_error = calc_out_sample_error(U, V, w, r, factors, num_neighbors, p, b);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
     
-    // if (new_error > old_error) { // overfitting has occurred
-    //   std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
-    //   break;
-    // }
-    // old_error = new_error;
+    if (new_error > old_error) { // overfitting has occurred
+      std::cout << "E_out has begun to increase! Halting matrix factorization to prevent overfitting...\n";
+      break;
+    }
+    old_error = new_error;
   }
 }
 
