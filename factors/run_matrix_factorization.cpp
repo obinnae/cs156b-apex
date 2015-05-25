@@ -327,12 +327,12 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   float ** w = new float * [num_movies];
   for(int i = 0; i < num_movies; i++) {
-    w[i] = new float[10];
+    w[i] = new float[num_neighbors];
   }
 
   int ** r = new int * [num_movies];
   for(int i = 0; i < num_movies; i++) {
-    r[i] = new int[10]; //update to use k in future
+    r[i] = new int[num_neighbors]; //update to use k in future
   }
 
 
@@ -357,6 +357,8 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
     delete[] w[i];
     delete[] r[i];
   }
+
+
   delete[] U;
   delete[] V;
   delete[] w;
