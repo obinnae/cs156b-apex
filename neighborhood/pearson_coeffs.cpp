@@ -146,7 +146,7 @@ void calc_correlation_matrix(float ** pearson_coeff,
 
   time_t t1= time(NULL);
 
-  for (int u = 0; u < 1000; u++) {
+  for (int u = 0; u < num_users; u++) {
     int num_user_entries = d->get_user_entries(u, user_entries);
 
     int idx;
@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
     		int ind = neighbor_index[i][j];
     		coeffsFile << ind << " ";
     	}
-    	coeffsFile << endl;
+    	coeffsFile << std::endl;
 
     }
     coeffsFile.close();
