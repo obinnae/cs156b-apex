@@ -12,7 +12,7 @@ void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
   for (int m = 0; m < MAX_MOVIES; m++) {
     float norm = 0;
     for (int f = 0; f < num_factors; f++) {
-      float val = static_cast<float>(rand()) / RAND_MAX);
+      float val = static_cast<float>(rand()) / RAND_MAX * 2 - 1;
       factor_matrix[m * num_factors + f] = val;
       norm += val * val;
     }
@@ -57,18 +57,18 @@ void calc_factor_gradient(float *corr_matrix, float *factor_matrix, float *lambd
   }
 }
 
-void run_epoch(float *corr_matrix, float *factor_matrix, int num_factors, float lrate) {
+void run_epoch(float *corr_matrix, float *factor_matrix, float *lambdas, int num_factors, float lrate) {
   float *i_gradient = new float[num_factors];
   float *j_gradient = new float[num_factors];
 
   int count = 0;
   for (int m1 = 0; m1 < MAX_MOVIES; m1++) {
     for (int m2 = m1; m2 < MAX_MOVIES; m2++) {
-      if (corr_matrix[m1 * MAX_MOVIES + m2] == nan) continue;
+      if (std::isnan(corr_matrix[m1 * MAX_MOVIES + m2])) continue;
 
-      calc_factor_gradient(corr_matrix, factor_matrix, num_factors, m1, m2, i_gradient, j_gradient);
-      float lambda1_grad = calc_lambda_gradient(factor_matrix, m1);
-      float lambda2_grad = calc_lambda_gradient(factor_matrix, m2);
+      calc_factor_gradient(corr_matrix, factor_matrix, lambdas, num_factors, m1, m2, i_gradient, j_gradient);
+      float lambda1_grad = calc_lambda_gradient(factor_matrix, num_factors, m1);
+      float lambda2_grad = calc_lambda_gradient(factor_matrix, num_factors, m2);
 
       for (int f = 0; f < num_factors; f++) {
         factor_matrix[m1 * num_factors + f] -= lrate * i_gradient[f];
@@ -94,7 +94,7 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
   int count = 0;
   for (int m1 = 0; m1 < MAX_MOVIES; m1++) {
     for (int m2 = m1; m2 < MAX_MOVIES; m2++) {
-      if (corr_matrix[m1 * MAX_MOVIES + m2] == nan)
+      if (std::isnan(corr_matrix[m1 * MAX_MOVIES + m2]))
         continue;
 
       float error;
@@ -116,16 +116,16 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
   return total_error;
 }
 
-void factor_matrix(float *corr_matrix, float *factor_matrix, int num_factors, float lrate, int num_epochs) {
+void do_matrix_factorization(float *corr_matrix, float *factor_matrix, int num_factors, float lrate, int num_epochs) {
   float *lambdas = new float[MAX_MOVIES];
 
   initialize_matrix(factor_matrix, lambdas, num_factors);
 
   for (int e = 0; e < num_epochs; e++) {
     time_t t1 = time(NULL);
-    run_epoch(corr_matrix, factor_matrix, num_factors, lrate);
+    run_epoch(corr_matrix, factor_matrix, lambdas, num_factors, lrate);
 
-    float error = calc_error(corr_matrix, factor, num_factors);
+    float error = calc_error(corr_matrix, factor_matrix, num_factors);
     time_t t2 = time(NULL);
     
     std::cout << "Epoch time: " << difftime(t2, t1) << " seconds\n";
@@ -198,21 +198,18 @@ void read_correlation_file(char *file, float *correlation_matrix) {
     }
   }
   in.close();
-
-  int mov_idx = m1 * MAX_MOVIES + m2;
-  return correlation_matrix[mov_idx];
 }
 
 void genre_predictions(float *corr_matrix, int num_factors, float lrate, int num_epochs, DataAccessor *train_data, DataAccessor *probe_data, DataAccessor *qual_data, Baseline *b, char *probe_out, char *qual_out) {
   float *factor_matrix = new float[MAX_MOVIES * num_factors];
   float *user_prefs = new float[MAX_USERS * num_factors];
 
-  factor_matrix(correlation_matrix, factor_matrix, num_factors, lrate, num_epochs);
+  do_matrix_factorization(corr_matrix, factor_matrix, num_factors, lrate, num_epochs);
 
-  calc_user_prefs(factor, user_prefs, num_factors, train_data, b);
+  calc_user_prefs(factor_matrix, user_prefs, num_factors, train_data, b);
 
-  calc_predictions(factor, user_prefs, num_factors, probe_data, b, probe_out);
-  calc_predictions(factor, user_prefs, num_factors, qual_data, b, qual_out);
+  calc_predictions(factor_matrix, user_prefs, num_factors, probe_data, b, probe_out);
+  calc_predictions(factor_matrix, user_prefs, num_factors, qual_data, b, qual_out);
 
   delete[] factor_matrix;
   delete[] user_prefs;
@@ -271,7 +268,7 @@ int main(int argc, char *argv[]) {
 
   read_correlation_file(correlation_file, correlation_matrix);
 
-  genre_predictions(correlation_matrix, num_factors, lrate, num_epochs, &train_data, &probe_data, &qual_data, &b);
+  genre_predictions(correlation_matrix, num_factors, lrate, num_epochs, &train_data, &probe_data, &qual_data, &b, probe_outfile, qual_outfile);
 
   delete[] correlation_matrix;
 
