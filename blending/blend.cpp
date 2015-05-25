@@ -31,6 +31,8 @@ float blend_new_estimates(float *old_estimates, float *new_estimates, DataAccess
   // Returns the optimal weight to be put on the old estimates
   float numerator, denominator;
 
+  numerator = 0;
+  denominator = 0;
   for (int i = 0; i < data->get_num_entries(); i++) {
     int r = data->extract_rating(data->get_entry(i));
     float r_est1 = old_estimates[i];
@@ -59,7 +61,7 @@ void calc_blend_weights(int num_files, char **blend_files, DataAccessor *probe_d
     float old_weight = blend_new_estimates(old_estimates, new_estimates, probe_data);
 
     std::cout << "Weight calculated for " << blend_files[i] << ": " << (1-old_weight) << std::endl;
-    
+
     for (int idx = 0; idx < probe_size; idx++)
       old_estimates[idx] = old_estimates[idx] * old_weight + new_estimates[idx] * (1 - old_weight);
     std::cout << "Updated estimates with new data\n";
