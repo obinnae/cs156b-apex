@@ -10,8 +10,11 @@
 #include <ctime>
 #include <cmath>
 #include <cstring>
+#include <string>
 
 #include "../DataAccessor/data_accessor.h"
+
+#define MAX_FILENAME_LENGTH 100
 
 void load_estimates(float *estimates, char *file, int num_entries) {
   std::ifstream in(file);
@@ -135,28 +138,48 @@ void perform_blend(int num_files, char **blend_files, float **bin_weights, DataA
   out.close();
 }
 
+void load_blend_list(char *blend_list_file, char **probe_files, char **qual_files, int num_blends) {
+  std::ifstream in(blend_list_file);
+
+  std::string probe_str, qual_str;
+  for (int i = 0; i < num_blends; i++) {
+    if (!in) {
+      std::cout << "Could not load " << num_blends << " sets of files to blend from " << blend_list_file << std::endl;
+      exit(1);
+    }
+
+    getline(in, probe_str, ' ');
+    getline(in, qual_str);
+
+    strcpy(probe_files[i], probe_str.c_str());
+    strcpy(qual_files[i], qual_str.c_str());
+
+    std::cout << probe_files[i] << " " << qual_files[i] << std::endl;
+  }
+  in.close();
+}
 
 int main(int argc, char *argv[]) {
   int num_user_bins, num_movie_bins;
   char *output_file;
   char *train_entry_file, *probe_entry_file, *qual_entry_file;
+  char *blend_list_file;
   char **probe_files;
   char **qual_files;
   int num_blends;
   
-  if (argc < 9) {
-    std::cout << "Usage: blend <user-bins> <movie-bins> <output-file> <train-entries> <probe-entries> <qual-entries> <probe_1> [<probe_2> ...] <qual_1> [<qual_2> ...]\n";
+  if (argc != 9) {
+    std::cout << "Usage: blend <user-bins> <movie-bins> <output-file> <train-entries> <probe-entries> <qual-entries> <num_blends> <blend-list-file>\n";
     exit(1);
   }
-  num_blends = (argc - 7) / 2;
   num_user_bins = atoi(argv[1]);
   num_movie_bins = atoi(argv[2]);
   output_file = argv[3];
   train_entry_file = argv[4];
   probe_entry_file = argv[5];
   qual_entry_file = argv[6];
-  probe_files = argv + 7;
-  qual_files = probe_files + num_blends;
+  num_blends = atoi(argv[7]);
+  blend_list_file = argv[8];
 
   std::cout << "Blending " << num_blends << " files with the following parameters:\n"
       << "\tOutput file: " << output_file << std::endl
@@ -166,6 +189,14 @@ int main(int argc, char *argv[]) {
       << "\tNumber of user bins: " << num_user_bins << std::endl
       << "\tNumber of movie bins: " << num_movie_bins << std::endl
       << "\tNumber of blends: " << num_blends << std::endl;
+
+  probe_files = new char*[num_blends];
+  qual_files = new char*[num_blends];
+  for (int i = 0; i < num_blends; i++) {
+    probe_files[i] = new char[MAX_FILENAME_LENGTH];
+    qual_files[i] = new char[MAX_FILENAME_LENGTH];
+  }
+  load_blend_list(blend_list_file, probe_files, qual_files, num_blends);
 
   DataAccessor train_data, probe_data, qual_data;
 
@@ -193,5 +224,12 @@ int main(int argc, char *argv[]) {
   for (int bin_idx = 0; bin_idx < num_user_bins * num_movie_bins; bin_idx++)
     delete[] bin_weights[bin_idx];
   delete[] bin_weights;
+
+  for (int i = 0; i < num_blends; i++) {
+    delete[] probe_files[i];
+    delete[] qual_files[i];
+  }
+  delete[] probe_files;
+  delete[] qual_files;
 
 }
