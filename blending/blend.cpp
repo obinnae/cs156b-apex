@@ -16,8 +16,10 @@ void load_estimates(float *estimates, char *file, int num_entries) {
   std::ifstream in(file);
   
   for (int i = 0; i < num_entries; i++) {
-    if (!in)
+    if (!in) {
       std::cout << "Error: Could not read enough ratings from file " << file << "!\n";
+      exit(1);
+    }
 
     in >> estimates[i];
   }
@@ -80,8 +82,10 @@ void perform_blend(int num_files, char **blend_files, float *weights, DataAccess
 
     float val;
     for (int i = 0; i < num_files; i++) {
-      if (!ins[i])
+      if (!ins[i]) {
         std::cout << "Error: Could not read enough ratings from file " << blend_files[i] << "!\n";
+        exit(1);
+      }
 
       ins[i] >> val;
       r += val * weights[i];
