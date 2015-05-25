@@ -11,15 +11,16 @@
 void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
   for (int m = 0; m < MAX_MOVIES; m++) {
     float norm = 0;
+    float *row = factor_matrix + m * num_factors;
     for (int f = 0; f < num_factors; f++) {
       float val = static_cast<float>(rand()) / RAND_MAX * 2 - 1;
-      factor_matrix[m * num_factors + f] = val;
+      row[f] = val;
       norm += val * val;
     }
     norm = sqrt(norm);
     // make sure each latent factor vector is a unit vector
     for (int f = 0; f < num_factors; f++) {
-      factor_matrix[m * num_factors + f] /= norm;
+      row[f] /= norm;
     }
 
     lambdas[m] = static_cast<float>(rand()) / RAND_MAX * 2 - 1;
@@ -122,6 +123,7 @@ void do_matrix_factorization(float *corr_matrix, float *factor_matrix, int num_f
   std::cout << "Initializing factor matrix...\n";
   initialize_matrix(factor_matrix, lambdas, num_factors);
 
+  std::cout << "Performing matrix factorization\n";
   for (int e = 0; e < num_epochs; e++) {
     time_t t1 = time(NULL);
     run_epoch(corr_matrix, factor_matrix, lambdas, num_factors, lrate);
@@ -205,7 +207,6 @@ void genre_predictions(float *corr_matrix, int num_factors, float lrate, int num
   float *factor_matrix = new float[MAX_MOVIES * num_factors];
   float *user_prefs = new float[MAX_USERS * num_factors];
 
-  std::cout << "Performing matrix factorization\n";
   do_matrix_factorization(corr_matrix, factor_matrix, num_factors, lrate, num_epochs);
 
   std::cout << "Calculating user preferences\n";
