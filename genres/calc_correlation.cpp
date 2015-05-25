@@ -124,10 +124,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
         m2 = d.extract_movie_id(e2);
         r2 = d.extract_rating(e2) - b.get_baseline(u, m2);
 
-        if (m1 == 0 && m2 == 1)
-          std::cout << "User " << u << " has ratings for movies 0 and 1: (" << r1 << ", " << r2 << ")\n";
-
-        idx = idx1 * MAX_MOVIES + idx2;
+        idx = m1 * MAX_MOVIES + m2;
         dot_prods[idx] += r1 * r2;
         v1sum[idx] += r1;
         v1sqsum[idx] += r1 * r1;
@@ -151,17 +148,20 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
       out.write(reinterpret_cast<char*>(&c), sizeof(float));
     }
   }
+  out.close();
 
   time_t t2 = time(NULL);
   std::cout << "Calculated all correlations in " << difftime(t2, t1) << " seconds: " << (difftime(t2, t1) / (MAX_MOVIES * (MAX_MOVIES + 1)/2)) << "s/corr\n";
 
   std::cout << "Correlation between movies 0 and 1 is " << correlation[1] << std::endl;
+  std::cout << "Data between movies 0 and 1:\n\tv1_sum = " << v1sum[1] << "\n\tv2_sum = " << v2sum[1] << "\n\tv1_sqsum = " << v1sqsum[1] << "\n\tv1_dot_v2 = " << dot_prods[1] << "\n\tv2_sqsum = " << v2sqsum[1] << "\n\tcount = " << count[1] << std::endl;
 
   delete[] v1sum;
   delete[] v2sum;
   delete[] v1sqsum;
   delete[] dot_prods;
   delete[] v2sqsum;
+  delete[] correlation;
 
 
 }
