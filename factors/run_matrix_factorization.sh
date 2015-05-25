@@ -1,8 +1,8 @@
 #!/bin/bash
 
-./run_matrix_factorization ../data/train.cdta ../data/probe.cdta 1 1 0.01 0.008 50 ../neighborhood/knn50.txt ../data/qual_um.dta ../submissions/probe_1features_1epochs.dta ../submissions/qual_1features_1epochs.dta
+./run_matrix_factorization ../data/train.cdta ../data/probe.cdta 1 1 0.01 0.008 50 ../neighborhood/knn50.txt ../data/qual.cdta ../submissions/probe_1features_1epochs.dta ../submissions/qual_1features_1epochs.dta
 
-#./run_matrix_factorization ../data/train.cdta ../data/probe.cdta 10 10 0.01 0.008 50 ../neighborhood/knn50.txt ../data/qual_um.dta ../submissions/probe_10features_10epochs.dta ../submissions/qual_10features_10epochs.dta
+#./run_matrix_factorization ../data/train.cdta ../data/probe.cdta 10 10 0.01 0.008 50 ../neighborhood/knn50.txt ../data/qual.cdta ../submissions/probe_10features_10epochs.dta ../submissions/qual_10features_10epochs.dta
 #For quick submission test to see if modifications are any good on quiz
 
 #./run_matrix_factorization ../data/train.cdta ../data/probe.cdta 30 20 0.01 0.008 ../data/qual_um.dta ../data/submission_30features_20epochs.dta
