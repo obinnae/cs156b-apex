@@ -55,7 +55,7 @@ void calc_blend_weights(int num_files, char *blend_files[], char *probe_file, in
   for (int i = 0; i < num_files; i++) {
     load_estimates(new_estimates, blend_files[i], probe_size);
 
-    float old_weight = blend_new_estimates(old_estimates, new_estimates, probe_data);
+    float old_weight = blend_new_estimates(old_estimates, new_estimates, &probe_data);
 
     for (int j = 0; j < i; j++)
       weights[j] *= old_weight;
@@ -69,7 +69,7 @@ void calc_blend_weights(int num_files, char *blend_files[], char *probe_file, in
 
 int main(int argc, char *argv[]) {
   char *train_file, *probe_file;
-  char *blend_files[];
+  char **blend_files;
   int num_bins;
   int num_files;
   
@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
   num_files = argc - 4;
 
   std::cout << "Blending " << num_files << " files with the following parameters:\n"
-      << "\tTraining data file (for binning): " << data_path << std::endl
-      << "\tProbe data file (for blending): " << num_factors << std::endl
+      << "\tTraining data file (for binning): " << train_file << std::endl
+      << "\tProbe data file (for blending): " << probe_file << std::endl
       << "\tNumber of bins: " << num_bins << std::endl;
 
   float *weights = new float[num_files];
