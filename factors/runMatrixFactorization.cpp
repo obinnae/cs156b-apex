@@ -33,19 +33,42 @@ float getResult(int *data, float **u, float **v, float ** w, int ** r, int k, Da
     return sum;
 }
 
+                                    //runMatrixFactorization(U, V, w, r, factors, output_path, &d, &p, &q, &b, &b_p, &b_q);
+void runMatrixFactorization(float ** u,
+                            float ** v,
+                            float ** w,
+                            int ** r,
+                            int k,
+                            char * probe_output_path,
+                            char * qual_output_path,
+                            DataAccessor * d,
+                            DataAccessor * p,
+                            DataAccessor * q,
+                            Baseline *b){
+    ofstream probeOutFile;
+    ofstream qualOutFile;
 
-void runMatrixFactorization(float ** u, float ** v, float ** w, int ** r, int k, char * inputFile, char * outputFile, DataAccessor * d, Baseline *b){
-    ofstream outFile;
-    ifstream inFile;
+    probeOutFile.open(probe_output_path);
 
-    outFile.open(outputFile);
-    inFile.open(inputFile);
+    int * data = new int [2];
 
-
-    // loop through data
-    string line;
-    while(getline(inFile, line)){
-	outFile << getResult(parseLine(line), u, v, w, r, k, d, b) << endl;
+    for (int i = 0; i < p->get_num_entries(); i++)
+    {
+        entry_t e_p = p->get_entry(i);
+        data[0] = p->extract_user_id(e_p);
+        data[1] = p->extract_movie_id(e_p);
+        probeOutFile << getResult(data, u, v, w, r, k, d, b) << endl;
     }
+    probeOutFile.close();
+
+    qualOutFile.open(qual_output_path);
+    for (int i = 0; i < q->get_num_entries(); i++)
+    {
+        entry_t e_q = q->get_entry(i);
+        data[0] = q->extract_user_id(e_q);
+        data[1] = q->extract_movie_id(e_q);
+        probeOutFile << getResult(data, u, v, w, r, k, d, b) << endl;
+    }
+    qualOutFile.close();
 }
 

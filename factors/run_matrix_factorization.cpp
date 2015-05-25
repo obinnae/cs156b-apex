@@ -158,7 +158,7 @@ float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_f
   return sqrt(error / num_test_pts);
 }
 
-float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, DataAccessor *p, Baseline *b_p, int fold=-1){
+float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, DataAccessor *p, Baseline *b, int fold=-1){
     /*
      * Now passing in reference to DataAccessor and Baseline objects for probe dataset
      * Uses these to get the actual ratings and baselines for predictions of probe dataset
@@ -198,7 +198,7 @@ float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_
                 rating_error += U[user_id][j] * V[movie_id][j];
             }
 
-            rating_error -= rating - b_p->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.001 * weightSum(user_id, movie_id, 10, w, r, p, b_p)); //Adjust to use k
+            rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.001 * weightSum(user_id, movie_id, 10, w, r, p, b)); //Adjust to use k
             error += rating_error * rating_error;
             
             // Increment number of test points
@@ -215,7 +215,7 @@ float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_
     return sqrt(error / num_test_pts);
 }
 
-void single_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b, Baseline * b_p) {
+void single_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b) {
   float old_error = 100; // a big number
   float new_error;
 
@@ -225,7 +225,7 @@ void single_fold_factorization(float **U, float **V, float ** w, int ** r, int f
 
     update_latent_factors(U, V, w, r, d, b,factors, 1, lambda, lrate);
     calc_in_sample_error(U, V, w, r, factors, d, b);
-    new_error = calc_out_sample_error(U, V, w, r, factors, p, b_p);
+    new_error = calc_out_sample_error(U, V, w, r, factors, p, b);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
     
@@ -278,7 +278,7 @@ void k_fold_factorization(float **U, float **V, float ** w, int ** r, int factor
 }
 
 
-void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, char * qualPath, char * outputPath, int folds=-1)
+void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, char * qual_path, char * probe_output_path, char * qual_output_path, int folds=-1)
 { //Included probe path in signature
 
   // declare the number of epochs of SGD you want to do
@@ -289,9 +289,11 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   DataAccessor p; // Creating 2nd DataAccesor to manage probe data
   p.load_data(probe_path);
+
+  DataAccessor q;
+  q.load_data(qual_path);
   
   Baseline b(&d); // Baseline instantiation
-  Baseline b_p(&p); // Baselines for probe data
   
   int num_users = d.get_num_users();
   int num_movies = d.get_num_movies();
@@ -322,13 +324,13 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   // calculate U and V
   if (folds <= 1) {
-    single_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, &d, &p, &b, &b_p); // Added probe dataAccessor and Baseline object to call
+    single_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, &d, &p, &b); // Added probe dataAccessor and Baseline object to call
   } else {
     k_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, folds, &d, &b);
   }
 
   // create qual submission using latent factors
-  runMatrixFactorization(U, V, w, r, factors, qualPath, outputPath, &d, &b);
+  runMatrixFactorization(U, V, w, r, factors, probe_output_path, qual_output_path, &d, &p, &q, &b);
 
   // Clean up after yourself
   for (int i = 0; i < num_users; i++)
@@ -349,23 +351,25 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
 
 int main(int argc, char *argv[]) {
-  char *data_path, *probe_path, *qualPath, *outputPath; //Added probe variable for reading in probe param
+  char * data_path, * probe_path, *qual_path, * probe_output_path, * qual_output_path; //Added probe variable for reading in probe param
   int num_factors;
   int num_epochs;
   float lambda, lrate;
   int num_folds;
   
-  if (argc == 9) { // Changed Counts on argument length checks to accomodate for probe
+  if (argc == 10) { // Changed Counts on argument length checks to accomodate for probe //Changed again to accomodate probe output path
     // Also adjusted indices of arguments following probe
     num_folds = -1;
-    qualPath = argv[7];
-    outputPath = argv[8];
-  } else if (argc == 10){
+    qual_path = argv[7];
+    probe_output_path = argv[8];
+    qual_output_path = argv[9];
+  } else if (argc == 11){
     num_folds = atoi(argv[7]);
-    qualPath = argv[8];
-    outputPath = argv[9];
+    qual_path = argv[8];
+    probe_output_path = argv[9];
+    qual_output_path = argv[10];
   } else {
-    std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> [<#-folds>] <qual_path> <output-file-path>\n";
+    std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> [<#-folds>] <qual_path> <probe-output-file-path> <qual-output-file-path>\n";
     /*
      * Modified usage message to clarify the extra command line arg
      * Also renamed old data-file arg to differentiate between train-data and probe-data
@@ -388,7 +392,7 @@ int main(int argc, char *argv[]) {
       << "\tLearning rate: " << lrate << std::endl
       << "\tNumber of folds: " << num_folds << std::endl;
 
-  run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, qualPath, outputPath, num_folds);
+  run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, qual_path, probe_output_path, qual_output_path, num_folds);
 
   std::cout << "\nMatrix factorization finished!\n";
   
