@@ -67,7 +67,7 @@ void runMatrixFactorization(float ** u,
         entry_t e_q = q->get_entry(i);
         data[0] = q->extract_user_id(e_q);
         data[1] = q->extract_movie_id(e_q);
-        probeOutFile << getResult(data, u, v, w, r, k, d, b) << endl;
+        qualOutFile << getResult(data, u, v, w, r, k, d, b) << endl;
     }
     qualOutFile.close();
 }
