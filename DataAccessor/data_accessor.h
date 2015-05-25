@@ -60,7 +60,7 @@
 #define MAX_ENTRIES_PER_USER 3496
 #define MAX_ENTRIES_PER_MOVIE 242126
 
-#define USE_VALIDATION
+//#define USE_VALIDATION
 
 typedef struct entry_compressed_t { unsigned char x[6]; } entry_compressed_t;
 typedef struct entry_t { unsigned int x[5]; } entry_t;

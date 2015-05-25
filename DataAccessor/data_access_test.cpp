@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Loaded " << d.get_num_entries() << " entries over " << d.get_num_users() << " users and " << d.get_num_movies() << " movies.\n";
   std::cout << "Accessed rating for user " << (u+1) << " and movie " << (m+1) << ": "
             << rating << " " << date << std::endl;
-  std::cout << "Validation ID for this entry: " << d.get_validation_id(entry) << " = " << d.get_validation_id(u, m) << std::endl;
+  //std::cout << "Validation ID for this entry: " << d.get_validation_id(entry) << " = " << d.get_validation_id(u, m) << std::endl;
 
   time_access_by_index(&d, num_indices);
   time_access_by_user(&d, user_id+1);
