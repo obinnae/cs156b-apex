@@ -82,7 +82,11 @@ void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAcc
 
   //Loop for the chosen number of epochs
   t1 = time(NULL);
+<<<<<<< HEAD
   for (int k = 0; k < d->10; k++) {
+=======
+  for (int k = 0; k < 10; k++) {
+>>>>>>> cb8910fbc895d7a0e4814259f0ff9aae2adf55ab
 
     // randomly select U or V
     isU = (rand() % 2) == 1;
