@@ -80,7 +80,7 @@ float pearson_coef(float *v1, float *v2, int n) {
 
 }*/
 
-void read_correlation_file(char *file, int m1, int m2) {
+float read_correlation_file(char *file, int m1, int m2) {
   std::ifstream in(file);
 
   float *correlation_matrix = new float[MAX_MOVIES * MAX_MOVIES];
