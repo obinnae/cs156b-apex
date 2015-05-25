@@ -85,7 +85,7 @@ float read_correlation_file(char *file, int m1, int m2) {
 
   float *correlation_matrix = new float[MAX_MOVIES * MAX_MOVIES];
   for (int i = 0; i < MAX_MOVIES; i++) {
-    for (int j = i + 1; j < MAX_MOVIES; j++) {
+    for (int j = i; j < MAX_MOVIES; j++) {
       int idx = i * MAX_MOVIES + j;
       in.read(reinterpret_cast<char*>(correlation_matrix + idx), 4);
     }
