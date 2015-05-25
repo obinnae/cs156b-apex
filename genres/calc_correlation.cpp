@@ -124,6 +124,9 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
         m2 = d.extract_movie_id(e2);
         r2 = d.extract_rating(e2) - b.get_baseline(u, m2);
 
+        if (m1 == 0 && m2 == 1)
+          std::cout << "User " << u << " has ratings for movies 0 and 1: (" << r1 << ", " << r2 << ")\n";
+
         idx = idx1 * MAX_MOVIES + idx2;
         dot_prods[idx] += r1 * r2;
         v1sum[idx] += r1;
