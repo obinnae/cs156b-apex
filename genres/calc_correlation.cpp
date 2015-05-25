@@ -138,10 +138,14 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
       std::cout << (u+1) << " sets of user entries processed\n";
   }
 
+  std::ofstream out(out_path);
   for (int m1 = 0; m1 < num_movies; m1++) {
     for (int m2 = m1 + 1; m2 < num_movies; m2++) {
       int idx = m1 * MAX_MOVIES + m2;
-      correlation[idx] = pearson_coef(v1sum[idx], v2sum[idx], v1sqsum[idx], dot_prods[idx], v2sqsum[idx], count[idx]);
+      float c = pearson_coef(v1sum[idx], v2sum[idx], v1sqsum[idx], dot_prods[idx], v2sqsum[idx], count[idx]);
+      correlation[idx] = c;
+
+      out.write(reinterpret_cast<char*>(&c), sizeof(float));
     }
   }
 
@@ -155,6 +159,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
   delete[] v1sqsum;
   delete[] dot_prods;
   delete[] v2sqsum;
+
 
 }
 
