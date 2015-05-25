@@ -114,7 +114,8 @@ int main(int argc, char *argv[]) {
       << "\tTraining data file (for binning): " << train_entry_file << std::endl
       << "\tProbe data file (for calculating blend): " << probe_entry_file << std::endl
       << "\tQual data file (for performing blend): " << qual_entry_file << std::endl
-      << "\tNumber of bins: " << num_bins << std::endl;
+      << "\tNumber of bins: " << num_bins << std::endl
+      << "\tNumber of blends: " << num_blends << std::endl;
 
   DataAccessor train_data, probe_data, qual_data;
 
