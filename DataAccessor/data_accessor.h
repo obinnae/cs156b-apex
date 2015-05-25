@@ -60,6 +60,8 @@
 #define MAX_ENTRIES_PER_USER 3496
 #define MAX_ENTRIES_PER_MOVIE 242126
 
+#define USE_VALIDATION
+
 typedef struct entry_compressed_t { unsigned char x[6]; } entry_compressed_t;
 typedef struct entry_t { unsigned int x[5]; } entry_t;
 
@@ -76,10 +78,12 @@ class DataAccessor {
   
   int *entries_per_movie;
   int *movie_start_indices;
-  int *movie_entry_indices;
+  entry_compressed_t *entries_by_movie;
 
+#ifdef USE_VALIDATION
   unsigned char *val_ids;
-  int num_val_sets;
+  int num_val_sets; 
+#endif
   
 public:
   DataAccessor(int k = 8); // default constructor (default # validation sets = 8)
@@ -91,6 +95,8 @@ public:
   int get_num_entries() const;
   int get_num_users() const;
   int get_num_movies() const;
+  int get_num_user_entries(int user_id) const;
+  int get_num_movie_entries(int movie_id) const;
   
   bool has_entry(int user_id, int movie_id) const;
   
@@ -99,6 +105,12 @@ public:
   
   // Get the index-th entry, in user-sorted-first order
   entry_t get_entry(int index) const;
+
+  // Gets a batch of entries beginning with start_index.
+  // The entries are returned in the batch array.
+  // Return value is number of entries in batch. This value is
+  // equal to max_entries unless the last entry was reached.
+  int get_entry_batch(int start_index, int max_entries, entry_t *batch) const;
   
   // Get all entries associated with the given user_id.
   // Entries are returned in the user_entries array.
@@ -116,9 +128,14 @@ public:
   int extract_movie_id(entry_t entry) const;
   int extract_rating(entry_t entry) const;
   int extract_date(entry_t entry) const;
+
+#ifdef USE_VALIDATION
   int extract_validation_id(entry_t entry) const; // for consistency, but the validation id isn't actually stored within the entry
+#endif
+
   void extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const;
 
+#ifdef USE_VALIDATION
   // Validation functionality
   // After loading from a data file, each entry is associated with
   // a random number V from 0 to 255, inclusive. The particular
@@ -144,7 +161,7 @@ public:
   // Randomize validation IDs
   // Gives new random values of V for each entry
   void reset_validation_ids();
-  
+#endif
   
 private:
   // Retrieves the entry value of the desired entry

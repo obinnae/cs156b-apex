@@ -29,22 +29,26 @@ DataAccessor::DataAccessor(int k) {
   
   entries_per_movie = new int[1];
   movie_start_indices = new int[1];
-  movie_entry_indices = new int[1];
+  entries_by_movie = new entry_compressed_t[1];
 
+#ifdef USE_VALIDATION
   val_ids = new unsigned char[1];
   num_val_sets = k;
+#endif
 }
 
 DataAccessor::~DataAccessor() {
   delete[] entries_per_movie;
   delete[] movie_start_indices;
-  delete[] movie_entry_indices;
+  delete[] entries_by_movie;
 
   delete[] entries_per_user;
   delete[] user_start_indices;
   delete[] entries;
 
+#ifdef USE_VALIDATION
   delete[] val_ids;
+#endif
 }
 
 // Loads data from a file compressed in the format described in data_accessor.h.
@@ -89,20 +93,22 @@ void DataAccessor::load_data(char *datafile) {
 
 
   // Calculate movie information
-  delete[] movie_entry_indices;
+  delete[] entries_by_movie;
   delete[] movie_start_indices;
   delete[] entries_per_movie;
   
-  movie_entry_indices = new int[num_entries];
+  entries_by_movie = new entry_compressed_t[num_entries];
   movie_start_indices = new int[num_movies];
   entries_per_movie = new int[num_movies];
   calc_movie_info();
 
+#ifdef USE_VALIDATION
   // Calculate validation IDs for each entry, between 0 and 255
   // When a validation ID is requested, they will be returned (mod k), where k is # validation sets
   delete[] val_ids;
   val_ids = new unsigned char[num_entries];
   reset_validation_ids();
+#endif
 }
 
 
@@ -120,6 +126,15 @@ int DataAccessor::get_num_users() const {
 int DataAccessor::get_num_movies() const {
   return num_movies;
 }
+// Returns the number of entries associated with the given user
+int DataAccessor::get_num_user_entries(int user_id) const {
+  return entries_per_user[user_id];
+}
+// Returns the number of entries associated with the given movie
+int DataAccessor::get_num_movie_entries(int movie_id) const {
+  return entries_per_movie[movie_id];
+}
+
 
 // Returns true if the entry has been loaded and false otherwise.
 bool DataAccessor::has_entry(int user_id, int movie_id) const {
@@ -139,6 +154,15 @@ entry_t DataAccessor::get_entry(int index) const {
   }
   
   return decompress_entry_val(index, entries[index]);
+}
+
+int DataAccessor::get_entry_batch(int start_index, int max_entries, entry_t *batch) const {
+  int entries_in_batch = (max_entries < num_entries - start_index) ? max_entries : (num_entries - start_index);
+  int entry_idx = start_index;
+  for (int i = 0; i < entries_in_batch; i++, entry_idx++) {
+    batch[i] = decompress_entry_val(entry_idx, entries[entry_idx]);
+  }
+  return entries_in_batch;
 }
 
 // Retrieves all entries associated with this user, placing them in the user_entries array.
@@ -161,12 +185,9 @@ int DataAccessor::get_user_entries(int user_id, entry_t *user_entries) const {
 int DataAccessor::get_movie_entries(int movie_id, entry_t *movie_entries) const {
   int movie_start = movie_start_indices[movie_id];
   int num_entries = entries_per_movie[movie_id];
-  int *entry_indices = new int[num_entries]; // it can be around 10% faster to copy over the entry indices before looping, not sure why...
-  memcpy(entry_indices, movie_entry_indices, num_entries*sizeof(int));
   for (int i = 0; i < num_entries; i++) {
-    movie_entries[i] = decompress_entry_val(entry_indices[i], entries[entry_indices[i]]);
+    movie_entries[i] = decompress_entry_val(movie_start + i, entries_by_movie[movie_start + i]);
   }
-  delete[] entry_indices;
   
   return num_entries;
 }
@@ -190,9 +211,13 @@ int DataAccessor::extract_rating(entry_t entry) const {
 int DataAccessor::extract_date(entry_t entry) const {
   return entry.x[4];
 }
+
+#ifdef USE_VALIDATION
 int DataAccessor::extract_validation_id(entry_t entry) const {
   return get_validation_id(entry);
 }
+#endif
+
 void DataAccessor::extract_all(entry_t entry, int &user_id, int &movie_id, int &rating, int &date) const {
   user_id = entry.x[1];
   movie_id = entry.x[2];
@@ -201,6 +226,7 @@ void DataAccessor::extract_all(entry_t entry, int &user_id, int &movie_id, int &
 }
 
 
+#ifdef USE_VALIDATION
 // Validation functionality
 // After loading from a data file, each entry is associated with
 // a random number V from 0 to 255, inclusive. The particular
@@ -246,6 +272,7 @@ void DataAccessor::reset_validation_ids() {
   for (int i = 0; i < num_entries; i++)
     val_ids[i] = static_cast<unsigned char>(rand() % 255);
 }
+#endif
 
 
 //// Private member functions
@@ -411,7 +438,7 @@ void DataAccessor::calc_movie_info() {
       int entry_index = user_start_indices[u] + i;
       int m = movie_id_from_entry_val(entries[entry_index]);
       int index = movie_start_indices[m] + entry_count_per_movie[m];
-      movie_entry_indices[index] = entry_index;
+      entries_by_movie[index] = entries[entry_index];
       
       entry_count_per_movie[m]++;
     }
