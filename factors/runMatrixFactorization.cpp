@@ -14,28 +14,29 @@ int *parseLine(string line){
     return data;
 }
 
-float  getResult(int *data, float **u, float **v, int k, Baseline *b){
+float  getResult(float **u, float **v, int k, int index, DataAccessor *d, Baseline *b){
+    entry_t e = d->get_entry(index);
+    int user_id = d->extract_user_id(e);
+    int movie_id = d->extract_movie_id(e);
+
     float sum = 0;
     for(int i = 0; i < k; i++){
-        sum += u[data[0]][i] * v[data[1]][i];
+        sum += u[user_id][i] * v[movie_id][i];
     }
-    sum += b->get_baseline(data[0], data[1]);
+    sum += b->get_baseline(user_id, movie_id);
     return sum;
 }
 
 
-void runMatrixFactorization(float ** u, float **v, int k, char * inputFile, char *outputFile, Baseline *b){
+void runMatrixFactorization(float ** u, float **v, int k, DataAccessor *data, Baseline *b, char *outputFile){
     ofstream outFile;
-    ifstream inFile;
 
     outFile.open(outputFile);
-    inFile.open(inputFile);
 
 
     // loop through data
-    string line;
-    while(getline(inFile, line)){
-	outFile << getResult(parseLine(line), u, v, k, b) << endl;
+    for (int i = 0; i < data->get_num_entries(); i++) {
+        outFile << getResult(u, v, k, i, data, b) << endl;
     }
 }
 
