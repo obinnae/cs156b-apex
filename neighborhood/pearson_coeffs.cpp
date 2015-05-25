@@ -110,6 +110,112 @@ int BS_index (float new_coeff,
  	}
  }
 
+// FROM Joseph
+
+float pearson_coef(float v1_sum, float v2_sum, float v1_norm, float v1_dot_v2, float v2_norm, int n) {
+  return (v1_dot_v2 - v1_sum * v2_sum / n) / sqrt((v1_norm - v1_sum * v1_sum / n) * (v2_norm - v2_sum * v2_sum / n));
+}
+
+
+void calc_correlation_matrix(float ** pearson_coeff,
+					   		int ** neighbor_index,
+					   		DataAccessor * d,
+					   		int num_neighbors) {
+
+  
+  //Baseline b(&d, BASELINE_ZERO);
+  //Baseline user_avgs(&d, BASELINE_USER_AVG);
+
+  entry_t *user_entries = new entry_t[MAX_ENTRIES_PER_USER];
+  entry_t e;
+  
+  float *v1sum = new float[MAX_MOVIES * MAX_MOVIES];
+  float *v2sum = new float[MAX_MOVIES * MAX_MOVIES];
+  float *v1sqsum = new float[MAX_MOVIES * MAX_MOVIES];
+  float *dot_prods = new float[MAX_MOVIES * MAX_MOVIES];
+  float *v2sqsum = new float[MAX_MOVIES * MAX_MOVIES];
+  int *count = new int[MAX_MOVIES * MAX_MOVIES];
+  
+  int num_users = d->get_num_users();
+  int num_movies = d->get_num_movies();
+
+  // Declare and allocate memory for the correlation matrix
+  float *correlation = new float[MAX_MOVIES * MAX_MOVIES];
+
+  srand(time(NULL));
+
+  time_t t1= time(NULL);
+
+  for (int u = 0; u < num_users; u++) {
+    int num_user_entries = d->get_user_entries(u, user_entries);
+
+    int idx;
+    entry_t e1, e2;
+    int m1, m2;
+    float r1, r2;
+    for (int idx1 = 0; idx1 < num_user_entries; idx1++) {
+      e1 = user_entries[idx1];
+      m1 = d->extract_movie_id(e1);
+      r1 = d->extract_rating(e1);
+      for (int idx2 = idx1 + 1; idx2 < num_user_entries; idx2++) {
+        e2 = user_entries[idx2];
+        m2 = d->extract_movie_id(e2);
+        r2 = d->extract_rating(e2);
+
+        idx = m1 * MAX_MOVIES + m2;
+        dot_prods[idx] += r1 * r2;
+        v1sum[idx] += r1;
+        v1sqsum[idx] += r1 * r1;
+        v2sum[idx] += r2;
+        v2sqsum[idx] += r2 * r2;
+        count[idx]++;
+      }
+    }
+
+    if (u % 10000 == 0)
+      std::cout << (u+1) << " sets of user entries processed\n";
+  }
+
+  //std::ofstream out(out_path);
+  for (int m1 = 0; m1 < num_movies; m1++) {
+  	int insert_index = 0;
+  	reorderCoeffs (insert_index,pearson_coeff[m1], num_neighbors, 1.000);
+	reorderIndexes (insert_index,neighbor_index[m1], num_neighbors, m1);
+
+    for (int m2 = m1 + 1; m2 < num_movies; m2++) {
+      int idx = m1 * MAX_MOVIES + m2;
+      float rho = pearson_coef(v1sum[idx], v2sum[idx], v1sqsum[idx], dot_prods[idx], v2sqsum[idx], count[idx]);
+      int insert_index = BS_index (rho, pearson_coeff[m1], num_neighbors);
+      reorderCoeffs (insert_index,pearson_coeff[m1], num_neighbors, rho);
+	  reorderIndexes (insert_index,neighbor_index[m1], num_neighbors, m2);
+
+	  int insert_index2 = BS_index (rho, pearson_coeff[m2], num_neighbors);
+	  reorderCoeffs (insert_index2,pearson_coeff[m2], num_neighbors, rho);
+	  reorderIndexes (insert_index2,neighbor_index[m2], num_neighbors, m1);
+      //correlation[idx] = c;
+
+      //out.write(reinterpret_cast<char*>(&c), sizeof(float));
+    }
+  }
+  //out.close();
+
+  time_t t2 = time(NULL);
+  std::cout << "Calculated all correlations in " << difftime(t2, t1) << " seconds: " << (difftime(t2, t1) / (MAX_MOVIES * (MAX_MOVIES + 1)/2)) << "s/corr\n";
+
+  std::cout << "Correlation between movies 0 and 1 is " << correlation[1] << std::endl;
+  std::cout << "Data between movies 0 and 1:\n\tv1_sum = " << v1sum[1] << "\n\tv2_sum = " << v2sum[1] << "\n\tv1_sqsum = " << v1sqsum[1] << "\n\tv1_dot_v2 = " << dot_prods[1] << "\n\tv2_sqsum = " << v2sqsum[1] << "\n\tcount = " << count[1] << std::endl;
+
+  delete[] v1sum;
+  delete[] v2sum;
+  delete[] v1sqsum;
+  delete[] dot_prods;
+  delete[] v2sqsum;
+  delete[] correlation;
+
+
+}
+
+
 
 void calcPearsonCoeff (float ** pearson_coeff,
 					   int ** neighbor_index,
@@ -138,6 +244,11 @@ void calcPearsonCoeff (float ** pearson_coeff,
 
 		for (int j = 0; j < num_movies; j++)
 		{
+			if (i > j)
+			{
+				continue;
+			}
+
 			float rho;
 			//printf("calculating coeff for movies %d and %d\n", i, j);
 
@@ -267,7 +378,7 @@ int main(int argc, char *argv[])
   	{
     	neighbor_index[i] = new int[num_neighbors];
   	}
-  	calcPearsonCoeff(pearson_coeff, neighbor_index, &d, num_neighbors);
+  	calc_correlation_matrix(pearson_coeff, neighbor_index, &d, num_neighbors);
 
   	std::ofstream coeffsFile;
     coeffsFile.open(neighboursfilepath);
