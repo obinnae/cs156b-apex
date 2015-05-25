@@ -107,7 +107,6 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
   srand(time(NULL));
 
   time_t t1= time(NULL);
-  d.get_movie_entries(0, m1_entries);
 
   for (int u = 0; u < num_users; u++) {
     int num_user_entries = d.get_user_entries(u, user_entries);
@@ -119,11 +118,11 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
     for (int idx1 = 0; idx1 < num_user_entries; idx1++) {
       e1 = user_entries[idx1];
       m1 = d.extract_movie_id(e1);
-      r1 = d.extract_rating(e1) - b.get_baseline(u1, m1);
+      r1 = d.extract_rating(e1) - b.get_baseline(u, m1);
       for (int idx2 = idx1 + 1; idx2 < num_user_entries; idx2++) {
         e2 = user_entries[idx2];
         m2 = d.extract_movie_id(e2);
-        r2 = d.extract_rating(e2) - b.get_baseline(u2, m2);
+        r2 = d.extract_rating(e2) - b.get_baseline(u, m2);
 
         idx = idx1 * MAX_MOVIES + idx2;
         dot_prods[idx] += r1 * r2;
@@ -132,6 +131,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
         v2sum[idx] += r2;
         v2sqsum[idx] += r2 * r2;
         count[idx]++;
+      }
     }
 
     if (u % 10000 == 0)
