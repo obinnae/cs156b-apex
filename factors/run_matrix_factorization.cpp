@@ -59,7 +59,7 @@ void initialize_latent_factors(int factors, float ** U, float ** V, float ** w, 
     j = 0;
     istringstream iss(line);
     string word;
-    while(iss >> word)
+    while(iss >> word && j<20)
     {
       r[i][j] = stoi(word);
       j+=1;
@@ -411,7 +411,9 @@ int main(int argc, char *argv[]) {
       << "\tNumber of epochs: " << num_epochs << std::endl
       << "\tLambda: " << lambda << std::endl
       << "\tLearning rate: " << lrate << std::endl
-      << "\tNumber of folds: " << num_folds << std::endl;
+      << "\tNumber of folds: " << num_folds << std::endl
+      << "\tNumber of neighbors: " << num_neighbors << std::endl
+      << "\tNeigbourhood source file: " << neighbors_path << std::endl;
 
   run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, num_neighbors, neighbors_path, qual_path, probe_output_path, qual_output_path, num_folds);
 
