@@ -14,6 +14,7 @@ float * gradient(const float * const * u,
                  Baseline *b,
                  const int factor_length,
                  float lambda,
+                 int num_neighbors,
                  bool isU,
                  float *factor_gradient);
 

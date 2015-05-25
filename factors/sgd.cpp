@@ -17,6 +17,7 @@ float * gradient(const float * const * u,
                  Baseline *b,
                  int factor_length,
                  float lambda,
+                 int num_neighbors,
                  bool isU,
                  float *factor_gradient) {
 
@@ -57,14 +58,14 @@ float * gradient(const float * const * u,
         error -= u[u_index][i] * v[v_index][i];
     }
 
-    error -= (1/ sqrt(10)) *  0.001 *  weightSum(u_index, v_index, 10, w, r, d, b);
+    error -= (1/ sqrt(num_neighbors)) *  0.001 *  weightSum(u_index, v_index, num_neighbors, w, r, d, b);
 
     //UPDATE Ws now
 
     // Make this k variable
     int * movie_indexes = r[v_index];
 
-    updateWeights(u_index, 10, v_index, movie_indexes, w, d, b, 0.001 , lambda, error);
+    updateWeights(u_index, num_neighbors, v_index, movie_indexes, w, d, b, 0.001 , lambda, error);
 
     /*for (int i = 0; i < factor_length; i++){
     	main_term[i] = non_factor[nfactor_i][i] * error;

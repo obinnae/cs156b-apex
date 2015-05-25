@@ -5,6 +5,7 @@
  * This program uses the gradient calculations to update the latent factors.
  */
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
@@ -20,38 +21,53 @@ using namespace std;
 #define MAX_USERS 458293
 
 
-void initialize_latent_factors(int factors, float ** U, float ** V, float ** w, int ** r, int num_users, int num_movies) {
+void initialize_latent_factors(int factors, float ** U, float ** V, float ** w, int ** r, int num_users, int num_movies, int num_neighbors, char * neighbors_path) {
   //initialize matrix elements to random numbers between 0 and 1
   for(int i = 0; i < num_users; i++)
+  {
     for (int j = 0; j < factors; j++)
+    {
       U[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
+    }
+  }
 
   for(int i = 0; i < num_movies; i++)
+  {
     for (int j = 0; j < factors; j++)
+    {
       V[i][j] = (0.002 * ((float) rand() / (RAND_MAX)))-0.001; //Adjusting initial values to -0.001 : 0.001
+    }
+  }
 
   for(int i = 0; i < num_movies; i++)
-    for (int j = 0; j < 10; j++)
+  {
+    for (int j = 0; j < num_neighbors; j++)
+    {
       w[i][j] = (float) 1;
+    }
+  }
 
-  for(int i = 0; i < num_movies; i++)
-    for (int j = 0; j < 10; j++) //update to use k in future
-      r[i][j] = rand() % num_movies;
+  ifstream neighborsFile;
+  neighborsFile.open(neighbors_path);
 
-/*  //prints out the matrix
-  for(int i = 0; i < num_users; i++)
-    for (int j = 0; j < factors; j++)
-      cout << "[" << i << "," << j << "]" << U[i][j];
-    cout << endl;
+  int i = 0;
+  int j = 0;
+  string line;
 
-  for(int i = 0; i < num_movies; i++)
-    for (int j = 0; j < factors; j++)
-      cout << "[" << i << "," << j << "]" << V[i][j];
-    cout << endl;
-*/
-
+  while(getline(neighborsFile, line))
+  {
+    j = 0;
+    istringstream iss(line);
+    string word;
+    while(iss >> word)
+    {
+      r[i][j] = stoi(word);
+      j+=1;
+    }
+    i+=1;
+  }
 }
-void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int fold=-1){
+void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAccessor * d, Baseline *b, int factors, int epochs, float lambda, float lrate, int num_neighbors, int fold=-1){
   bool isU;
 
   int index;
@@ -84,7 +100,7 @@ void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAcc
     movie_id = d->extract_movie_id(e);
 
     // Calculate gradient
-    gradient(U, V, w, r, e, d, b, factors, lambda, isU, step);
+    gradient(U, V, w, r, e, d, b, factors, lambda, num_neighbors, isU, step);
 
     // take a gradient step
     if(isU)
@@ -114,7 +130,7 @@ void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAcc
   std::cout << "Epoch time: " << difftime(t2, t1) << " sec\n";
 }
 
-float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, DataAccessor *d, Baseline *b, int fold=-1){
+float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, int num_neighbors, DataAccessor *d, Baseline *b, int fold=-1){
     /* TODO: update calc_in_sample_error to support k-fold. Should calculate error based on just that fold, or entire data set
      * if fold = -1 */
   float error = 0;
@@ -140,7 +156,7 @@ float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_f
         rating_error += U[user_id][j] * V[movie_id][j];
       }
 
-      rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.001 * weightSum(user_id, movie_id, 10, w, r, d, b)); //Adjust to use K
+      rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(num_neighbors)) *  0.001 * weightSum(user_id, movie_id, num_neighbors, w, r, d, b)); //Adjust to use K
 
 
       error += rating_error * rating_error;
@@ -158,7 +174,7 @@ float calc_in_sample_error(float **U, float **V, float ** w, int ** r, int num_f
   return sqrt(error / num_test_pts);
 }
 
-float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, DataAccessor *p, Baseline *b, int fold=-1){
+float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_factors, int num_neighbors, DataAccessor *p, Baseline *b, int fold=-1){
     /*
      * Now passing in reference to DataAccessor and Baseline objects for probe dataset
      * Uses these to get the actual ratings and baselines for predictions of probe dataset
@@ -198,7 +214,7 @@ float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_
                 rating_error += U[user_id][j] * V[movie_id][j];
             }
 
-            rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(10)) *  0.001 * weightSum(user_id, movie_id, 10, w, r, p, b)); //Adjust to use k
+            rating_error -= rating - b->get_baseline(user_id, movie_id) - ((1/ sqrt(num_neighbors)) *  0.001 * weightSum(user_id, movie_id, num_neighbors, w, r, p, b)); //Adjust to use k
             error += rating_error * rating_error;
             
             // Increment number of test points
@@ -215,17 +231,17 @@ float calc_out_sample_error(float **U, float **V, float ** w, int ** r, int num_
     return sqrt(error / num_test_pts);
 }
 
-void single_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, DataAccessor *d, DataAccessor * p, Baseline *b) {
+void single_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, int num_neighbors, char * neighbors_path, DataAccessor *d, DataAccessor * p, Baseline *b) {
   float old_error = 100; // a big number
   float new_error;
 
-  initialize_latent_factors(factors, U, V, w, r, d->get_num_users(), d->get_num_movies());
+  initialize_latent_factors(factors, U, V, w, r, d->get_num_users(), d->get_num_movies(), num_neighbors, neighbors_path);
 
   for (int epoch = 0; epoch < epochs; epoch++) {
 
-    update_latent_factors(U, V, w, r, d, b,factors, 1, lambda, lrate);
-    calc_in_sample_error(U, V, w, r, factors, d, b);
-    new_error = calc_out_sample_error(U, V, w, r, factors, p, b);
+    update_latent_factors(U, V, w, r, d, b,factors, 1, lambda, lrate, num_neighbors);
+    calc_in_sample_error(U, V, w, r, factors, num_neighbors, d, b);
+    new_error = calc_out_sample_error(U, V, w, r, factors, num_neighbors, p, b);
 
     std::cout << "*** EPOCH " << epoch << " COMPLETE! ***\n\n";
     
@@ -238,7 +254,7 @@ void single_fold_factorization(float **U, float **V, float ** w, int ** r, int f
 }
 
 
-void k_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, int folds, DataAccessor *d, Baseline *b) {
+void k_fold_factorization(float **U, float **V, float ** w, int ** r, int factors, int epochs, float lambda, float lrate, int num_neighbors, char * neighbors_path, int folds, DataAccessor *d, Baseline *b) {
 
   /* sum of errors at each epoch; init to all 0 */
   float *errors = new float[epochs];
@@ -251,11 +267,11 @@ void k_fold_factorization(float **U, float **V, float ** w, int ** r, int factor
 
   // do matrix factorization <folds> times
   for (int fold = 0; fold < folds; fold++){
-    initialize_latent_factors(factors, U, V, w, r, d->get_num_users(), d->get_num_movies());
+    initialize_latent_factors(factors, U, V, w, r, d->get_num_users(), d->get_num_movies(), num_neighbors, neighbors_path);
     
     for (int epoch = 0; epoch < epochs; epoch++){
-      update_latent_factors(U, V, w, r, d, b, factors, 1, lambda, lrate, fold);
-      errors[epoch] += calc_out_sample_error(U, V, w, r, factors, d, b, fold);
+      update_latent_factors(U, V, w, r, d, b, factors, 1, lambda, lrate, num_neighbors, fold);
+      errors[epoch] += calc_out_sample_error(U, V, w, r, factors, num_neighbors, d, b, fold);
 
       std::cout << "*** EPOCH " << epoch << " COMPLETE ***\n\n";
     }
@@ -278,7 +294,7 @@ void k_fold_factorization(float **U, float **V, float ** w, int ** r, int factor
 }
 
 
-void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, char * qual_path, char * probe_output_path, char * qual_output_path, int folds=-1)
+void run_matrix_factorization(int factors, char * data_path, char * probe_path, int epochs, float lambda, float lrate, int num_neighbors, char * neighbors_path, char * qual_path, char * probe_output_path, char * qual_output_path, int folds=-1)
 { //Included probe path in signature
 
   // declare the number of epochs of SGD you want to do
@@ -324,9 +340,9 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
   // calculate U and V
   if (folds <= 1) {
-    single_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, &d, &p, &b); // Added probe dataAccessor and Baseline object to call
+    single_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, num_neighbors, neighbors_path, &d, &p, &b); // Added probe dataAccessor and Baseline object to call
   } else {
-    k_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, folds, &d, &b);
+    k_fold_factorization(U, V, w, r, factors, epochs, lambda, lrate, num_neighbors, neighbors_path, folds, &d, &b);
   }
 
   // create qual submission using latent factors
@@ -351,25 +367,26 @@ void run_matrix_factorization(int factors, char * data_path, char * probe_path, 
 
 
 int main(int argc, char *argv[]) {
-  char * data_path, * probe_path, *qual_path, * probe_output_path, * qual_output_path; //Added probe variable for reading in probe param
+  char * data_path, * probe_path, *qual_path, * neighbors_path, * probe_output_path, * qual_output_path; //Added probe variable for reading in probe param
   int num_factors;
+  int num_neighbors;
   int num_epochs;
   float lambda, lrate;
   int num_folds;
   
-  if (argc == 10) { // Changed Counts on argument length checks to accomodate for probe //Changed again to accomodate probe output path
+  if (argc == 12) { // Changed Counts on argument length checks to accomodate for probe //Changed again to accomodate probe output path
     // Also adjusted indices of arguments following probe
     num_folds = -1;
-    qual_path = argv[7];
-    probe_output_path = argv[8];
-    qual_output_path = argv[9];
-  } else if (argc == 11){
-    num_folds = atoi(argv[7]);
-    qual_path = argv[8];
-    probe_output_path = argv[9];
-    qual_output_path = argv[10];
+    qual_path = argv[9];
+    probe_output_path = argv[10];
+    qual_output_path = argv[11];
+  } else if (argc == 13){
+    num_folds = atoi(argv[9]);
+    qual_path = argv[10];
+    probe_output_path = argv[11];
+    qual_output_path = argv[12];
   } else {
-    std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> [<#-folds>] <qual_path> <probe-output-file-path> <qual-output-file-path>\n";
+    std::cout << "Usage: run_matrix_factorization <train-data-file> <probe-data-file> <num-factors> <num-epochs> <lambda> <learning-rate> <num-nearest-neighbours> <nearest-neighbor-file> [<#-folds>] <qual_path> <probe-output-file-path> <qual-output-file-path>\n";
     /*
      * Modified usage message to clarify the extra command line arg
      * Also renamed old data-file arg to differentiate between train-data and probe-data
@@ -382,6 +399,8 @@ int main(int argc, char *argv[]) {
   num_epochs = atoi(argv[4]);
   lambda = atof(argv[5]);
   lrate = atof(argv[6]);
+  num_neighbors = atoi(argv[7]);
+  neighbors_path = argv[8];
 
 
   std::cout << "Running matrix factorization with the following parameters:\n"
@@ -392,7 +411,7 @@ int main(int argc, char *argv[]) {
       << "\tLearning rate: " << lrate << std::endl
       << "\tNumber of folds: " << num_folds << std::endl;
 
-  run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, qual_path, probe_output_path, qual_output_path, num_folds);
+  run_matrix_factorization(num_factors, data_path, probe_path, num_epochs, lambda, lrate, num_neighbors, neighbors_path, qual_path, probe_output_path, qual_output_path, num_folds);
 
   std::cout << "\nMatrix factorization finished!\n";
   
