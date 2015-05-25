@@ -119,7 +119,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
       e1 = user_entries[idx1];
       m1 = d.extract_movie_id(e1);
       r1 = d.extract_rating(e1) - user_avgs.get_baseline(u, m1);
-      for (int idx2 = idx1 + 1; idx2 < num_user_entries; idx2++) {
+      for (int idx2 = idx1; idx2 < num_user_entries; idx2++) {
         e2 = user_entries[idx2];
         m2 = d.extract_movie_id(e2);
         r2 = d.extract_rating(e2) - user_avgs.get_baseline(u, m2);
@@ -140,7 +140,7 @@ void calc_correlation_matrix(char *data_path, char *out_path) {
 
   std::ofstream out(out_path);
   for (int m1 = 0; m1 < num_movies; m1++) {
-    for (int m2 = m1 + 1; m2 < num_movies; m2++) {
+    for (int m2 = m1; m2 < num_movies; m2++) {
       int idx = m1 * MAX_MOVIES + m2;
       float c = pearson_coef(v1sum[idx], v2sum[idx], v1sqsum[idx], dot_prods[idx], v2sqsum[idx], count[idx]);
       correlation[idx] = c;
