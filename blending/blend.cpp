@@ -17,6 +17,7 @@ void load_estimates(float *estimates, char *file, int num_entries) {
   
   for (int i = 0; i < num_entries; i++) {
     in >> estimates[i];
+    std::cout << estimates[i] << std::endl;
   }
   
   in.close();
