@@ -88,7 +88,7 @@ void run_epoch(float *corr_matrix, float *factor_matrix, float *lambdas, int num
       count++;
 
       if (count % 15000000 == 0)
-        std::cout << "Processed " << count << " correlation values. Lambda gradients: " << lambda1_grad << " and " << lambda2_grad << "\n";
+        std::cout << "Processed " << count << " correlation values. Lambda = " << lambdas[m1] << " and " << lambdas[m2] << ". Lambda gradients: " << lambda1_grad << " and " << lambda2_grad << "\n";
     }
 
   }
