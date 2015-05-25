@@ -173,6 +173,12 @@ float single_fold_factorization(float **U, float **V, int factors, int epochs, f
     update_latent_factors(U, V, d, b,factors, 1, lambda, lrate);
     in_sample_error = calc_in_sample_error(U, V, factors, d, b);
     new_error = calc_out_sample_error(U, V, factors, p, b_p);
+
+    if (new_error > old_error) {
+      std::cout << "Halting prematurely because E_out has begun to increase!\n";
+      break;
+    }
+
     old_error = new_error;
   }
 

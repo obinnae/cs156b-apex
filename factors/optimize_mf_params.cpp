@@ -57,35 +57,25 @@ float optimize_lrate(float **U, float **V, int factors, int epochs, float lambda
 
 
 float optimize_lambda(float **U, float **V, int factors, int epochs, float lambda, float lrate, DataAccessor *d, Baseline *b, DataAccessor *d_p, Baseline *b_p) {
-  float step = 9;
+  float ratio_step = 0.6;
+  float best_lambda = lambda;
+  float best_error = 100;
   for (int e = 0; e < epochs; e++) {
-    float ratio = (1 + step/(e+1));
-    float high_lambda = lambda * ratio;
-    float low_lambda = lambda / ratio;
-
-    std::cout << "\n*** Running mf with lambda = " << lambda << " / " << ratio << " = " << low_lambda << std::endl;
-    float e_ll = single_fold_factorization(U, V, factors, 5, low_lambda, lrate, d, d_p, b, b_p);
 
     std::cout << "\n*** Running mf with lambda = " << lambda << std::endl;
-    float e_ml = single_fold_factorization(U, V, factors, 5, lambda, lrate, d, d_p, b, b_p);
+    float error = single_fold_factorization(U, V, factors, 7, lambda, lrate, d, d_p, b, b_p);
 
-    std::cout << "\n*** Running mf with lambda = " << lambda << " * " << ratio << " = " << high_lambda << std::endl;
-    float e_hl = single_fold_factorization(U, V, factors, 5,  high_lambda, lrate, d, d_p, b, b_p);
-
-    /*if (e_ll < e_ml && e_ll < e_hl) {
-      lambda = low_lambda;
-    } else if (e_hl < e_ll && e_hl < e_ml) {
-      lambda = high_lambda;
+    if (error < best_error) {
+      best_lambda = lambda;
+      best_error =error;
     }
-    std::cout << "Choosing lambda = " << lambda << std::endl;*/
-    lambda = exp(find_parabola_min(log(high_lambda), e_hl, log(lambda), e_ml, log(low_lambda), e_ll));
-    std::cout << "\n*** Minimum of parabolic-log fit @ " << lambda << std::endl;
-    if (lambda < low_lambda) lambda = low_lambda;
-    if (lambda > high_lambda) lambda = high_lambda;
-    std::cout << "*** Using lambda = " << lambda << std::endl << std::endl;
+
+    std::cout << "\n*** Best lambda so far: " << best_lambda << " with error " << best_error << std::endl;
+
+    lambda *= ratio_step;
   }
 
-  return lambda;
+  return best_lambda;
     
 }
 
