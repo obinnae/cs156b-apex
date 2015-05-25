@@ -165,25 +165,6 @@ void update_residuals(float * r, float * theta, bool movie_effect, int num_entri
 	}
 }
 
-//update the residuals matrix with x_ui
-void update_residuals_x_ui(float * r, float * theta, float * x_ui, bool movie_effect, int num_entries, DataAccessor * d){
-	entry_t curr_entry;
-	if(movie_effect){
-		//loop through all of r and update based on the movies
-		for(int i = 0; i < num_entries; i++){
-			//pull out the entry for index r
-			int curr_index = entry_to_movie_index(i, d);
-			r[i] = r[i] - theta[curr_index] * x_ui[curr_index];
-		}
-	}
-	else{
-		//loop through all of r and update based on the users
-		for(int i = 0; i < num_entries; i++){
-			int curr_index = entry_to_user_index(i, d);
-			r[i] = r[i] - theta[curr_index] * x_ui[curr_index];
-		}
-	}
-}
 
 //this method prints out the values in the array to a file
 void print_array_to_file(float * arr, int size){
@@ -241,7 +222,7 @@ int first_movie_date(int movie_id, DataAccessor * d){
 }
 
 //this method gets the time elapsed since user's first rating
-int time_elapsed_user(int user_id, int movie_id, DataAccessor * d) {
+float time_elapsed_user(int user_id, int movie_id, DataAccessor * d) {
 	//pull the date for this particular rating
 	entry_t curr_entry = d->get_entry(user_id, movie_id);
 	int rating_date = d->extract_date(curr_entry);
@@ -250,58 +231,115 @@ int time_elapsed_user(int user_id, int movie_id, DataAccessor * d) {
 }
 
 //this method gets the time elapsed since the movie's first rating
-int time_elapsed_movie(int user_id, int movie_id, DataAccessor * d) {
+float time_elapsed_movie(int user_id, int movie_id, DataAccessor * d) {
 	entry_t curr_entry = d->get_entry(user_id, movie_id);
 	int rating_date = d->extract_date(curr_entry);
 	int first_date = first_movie_date(user_id, d);
 	return std::sqrt(rating_date - first_date);
 }
 
-//this method fills the time array
-void fill_time_array(float * x_ui, DataAccessor * d, bool user, int num_entries) {
-	int user_id;
-	int movie_id;
-	//time since user's first rating
-	if(user){
-		for(int i = 0; i < num_entries; i++) {
-			std::cout << "Getting time elapsed for entry: " << i << endl;
- 			user_id = entry_to_user_index(i, d);
- 			movie_id = entry_to_movie_index(i, d);
- 			x_ui[i] = time_elapsed_user(user_id, movie_id, d);
- 		}
- 	}
- 	//time since movie's first rating
- 	else
- 	{
-		for(int i = 0; i < num_entries; i++) {
- 			user_id = entry_to_user_index(i, d);
- 			movie_id = entry_to_movie_index(i, d);
- 			x_ui[i] = time_elapsed_movie(user_id, movie_id, d);
- 		}
- 	}
-}
-
-//this method returns the x value given a user and a movie index: time elapsed since first rating
-float get_value_x(user_index, movie_index, bool movie, DataAccessor * d){
-
-}
-
-int find_theta_3(int user_id, float * r, float * x_ui, DataAccessor * d) {
+//find the user x time theta values
+int find_theta_user(int user_id, float * r, DataAccessor * d, bool movie_time) {
  	entry_t * user_entries = new entry_t[MAX_ENTRIES_PER_USER];
  	int num_entries = d->get_user_entries(user_id, user_entries);
  	int curr_id;
  	float top_sum = 0;
  	float bottom_sum = 0;
- 	//int * entry_ids = new int[num_entries];
+ 	int movie_id;
+ 	float x; //get value of x for a particular movie and user index
+ 	//loop through all the entries for one particular user
  	for(int i = 0; i< num_entries; i++) {
  		curr_id = d->extract_entry_index(user_entries[i]);
- 		top_sum = top_sum + r[curr_id] * x_ui[curr_id];
- 		bottom_sum = bottom_sum + x_ui[curr_id] * x_ui[curr_id];
+ 		movie_id = entry_to_movie_index(curr_id, d);
+ 		if(movie_time){
+ 			x = time_elapsed_movie(user_id, movie_id, d);
+ 		}
+ 		else {
+ 			x = time_elapsed_user(user_id, movie_id, d);
+ 		}
+ 		top_sum = top_sum + r[curr_id] * x;
+ 		bottom_sum = bottom_sum + x * x;
  	}
  	delete[] user_entries;
  	return top_sum/bottom_sum;
+}
 
- }
+//update the residuals matrix
+void update_residuals_x(float * r, float * theta, bool movie_effect, bool movie_time, int num_entries, DataAccessor * d){
+	//std::cout << "Updating the residual matrix" << endl;
+	entry_t curr_entry;
+	int user_index;
+	int movie_index;
+	float x;
+	if(movie_effect){
+		if(movie_time){
+			//loop through all of r and update based on the movies
+			for(int i = 0; i < num_entries; i++){
+				//std::cout << "Updating residuals based on movies" << endl;
+				user_index = entry_to_user_index(i, d);
+				movie_index = entry_to_movie_index(i, d);
+				x = time_elapsed_movie(user_index, movie_index, d);
+				r[i] = r[i] - theta[movie_index] * x;
+			}
+		}
+		else{
+			//loop through all of r and update based on the movies
+			for(int i = 0; i < num_entries; i++){
+				//std::cout << "Updating residuals based on movies" << endl;
+				user_index = entry_to_user_index(i, d);
+				movie_index = entry_to_movie_index(i, d);
+				x = time_elapsed_user(user_index, movie_index, d);
+				r[i] = r[i] - theta[movie_index] * x;
+			}
+
+		}
+	}
+	else{
+		if(movie_time){
+			//loop through all of r and update based on the users
+			for(int i = 0; i < num_entries; i++){
+			//std::cout << "Updating residuals based on users" << endl;
+			user_index = entry_to_user_index(i, d);
+			movie_index = entry_to_movie_index(i, d);
+			x = time_elapsed_movie(user_index, movie_index, d);
+			r[i] = r[i] - theta[user_index] * x;
+		}
+		}
+		else {
+			//loop through all of r and update based on the users
+			for(int i = 0; i < num_entries; i++){
+			//std::cout << "Updating residuals based on users" << endl;
+			user_index = entry_to_user_index(i, d);
+			movie_index = entry_to_movie_index(i, d);
+			x = time_elapsed_user(user_index, movie_index, d);
+			r[i] = r[i] - theta[user_index] * x;
+		}
+		}
+	}
+}
+
+void update_test_ratings(float * test_ratings, DataAccessor * d, DataAccessor * d2, bool movie_time){
+	int user_index;
+	int movie_index;
+	int curr_date;
+	entry_t curr_entry;
+	float * x = new float[num_probes];
+ 	for(int i = 0; i < num_probes; i++){
+ 		// find the date of of the movie rated by user
+ 		curr_entry = d2.get_entry(i);
+ 		curr_date = d2.extract_date(curr_entry);
+ 		user_index = d2.extract_user_id;
+ 		movie_index = d2.extract_movie_id;
+ 		if(movie_time){
+			x[i] = std::sqrt(curr_date - first_movie_date(movie_index, &d));
+ 		}
+ 		else{
+ 			x[i] = std::sqrt(curr_date - first_user_date(user_index, &d));
+ 		}
+ 		test_ratings[i] = test_ratings[i] + theta_3[user_index] * x[i];
+ 		delete[] x;
+ 	}
+}
 
 
 int main() {
@@ -445,58 +483,63 @@ int main() {
  	*******************************************/
  	float alpha_3 = 550;
 
-
  	//find theta_3 by looping through all the users
  	float * theta_3 = new float[MAX_USERS];
  	for(int i = 0; i < MAX_USERS; i++){
- 		theta_3[i] = find_theta_3(i, r, x_ui, &d);
- 		std::cout << "Updating theta for user: " << i << endl;
+ 		theta_3[i] = find_theta_user(i, r, &d, false);
  		theta_3[i] = (theta_3[i] * user_freq[i])/(alpha_3 + user_freq[i]);
  	}
 
+	std::cout<< "Generated the theta values" << endl;
+
  	//update residuals
- 	update_residuals_x_ui(r, theta_3, x_ui, false, num_entries, &d);
+ 	update_residuals_x(r, theta_3, false, false, num_entries, &d);
+ 	std::cout<< "Updated the residuals" << endl;
 
- 	std::cout << "Update residuals" << endl;
+ 	//update test_ratings to include the user x time(user)^(1/2) effect
+ 	update_test_ratings(test_ratings, &d, &d2, false);
+ 	std::cout<< "Updated the test ratings" << endl;
 
-
-
- 	//update test_ratings to include the user x time(user) effect
- 	for(int i = 0; i < num_probes; i++){
- 		int user_index = probe_to_user_index(i, &d2);
- 		int movie_index = probe_to_movie_index(i, &d2);
- 		float * x = new float[num_probes];
- 		fill_time_array(x, &d2, true, num_probes);
- 		test_ratings[i] = test_ratings[i] + theta_3[user_index] * x[user_index];
-
- 		std::cout<< "Generating test rating for probe: " << i << endl;
- 		delete[] x;
- 	}
-
- 	//compare the probe ratings to ratings in the file
+ 	//compare the test ratings to the probe ratings
 	rmse = evaluate_ratings(probe_ratings, test_ratings, num_probes);
 	std::cout << rmse << endl;
-	*/
+
+	//output the theta values to a file
+
 
  	/*******************************************
  	* Effect 4: User x Time(movie)^(1/2)
  	*******************************************/
  	float alpha_4 = 150;
 
- 	//fill the x_ui array for the time elapsed since movie first rating
- 	//fill_time_array(x_ui, &d, false, num_entries);
+ 	//find theta_4 by looping through all the users
+ 	float * theta_4 = new float[MAX_USERS];
+ 	for(int i = 0; i < MAX_USERS; i++){
+ 		theta_4[i] = find_theta_user(i, r, &d, true);
+ 		theta_4[i] = (theta_4[i] * user_freq[i])/(alpha_4 + movie_freq[i]);
+ 	}
 
- 	//find theta_4 by looping through all the movies
+ 	//update the residuals
+ 	update_residuals_x(r, theta_4, false, true, num_entries, &d);
 
- 	//update residuals
+ 	//update test_ratings to include the user x time(movie)^(1/2) effect
+ 	update_test_ratings(test_ratings, &d, &d2, true);
 
- 	//update
+ 	//compare the test ratings to the probe ratings
+ 	rmse = evaluate_ratings(probe_ratings, test_ratings, num_probes);
+	std::cout << rmse << endl;
+
+ 	//output the theta values to a file
 
 
  	/*******************************************
  	* Effect 5: Movie x Time(movie)^(1/2)
  	*******************************************/
  	float alpha_5 = 4000;
+
+ 	//find theta_5 by looping through all the movies
+ 	float * theta_5 = new float[MAX_MOVIES];
+ 	for(int i = 0; i < MAX_MOVIES)
 
  	/*******************************************
  	* Effect 6: Movie x Time(user)^(1/2)
