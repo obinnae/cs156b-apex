@@ -7,6 +7,13 @@
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
+bool has_correlation(float *corr_matrix, int m1, int m2) {
+  int idx = m1 * MAX_MOVIES + m2;
+  float c = corr_matrix[idx];
+
+  return (!std::isnan(c) && !std::isinf(c));
+}
+
 
 void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
   for (int m = 0; m < MAX_MOVIES; m++) {
@@ -23,7 +30,7 @@ void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
       row[f] /= norm;
     }
 
-    lambdas[m] = static_cast<float>(rand()) / RAND_MAX * 2 - 1;
+    lambdas[m] = (static_cast<float>(rand()) / RAND_MAX * 2 - 1) * 0.001;
   }
 }
 
@@ -65,7 +72,7 @@ void run_epoch(float *corr_matrix, float *factor_matrix, float *lambdas, int num
   int count = 0;
   for (int m1 = 0; m1 < MAX_MOVIES; m1++) {
     for (int m2 = m1; m2 < MAX_MOVIES; m2++) {
-      if (std::isnan(corr_matrix[m1 * MAX_MOVIES + m2])) continue;
+      if (!has_correlation(corr_matrix, m1, m2)) continue;
 
       calc_factor_gradient(corr_matrix, factor_matrix, lambdas, num_factors, m1, m2, i_gradient, j_gradient);
       float lambda1_grad = calc_lambda_gradient(factor_matrix, num_factors, m1);
@@ -79,10 +86,11 @@ void run_epoch(float *corr_matrix, float *factor_matrix, float *lambdas, int num
       lambdas[m2] -= lrate * lambda2_grad;
 
       count++;
+
+      if (count % 15000000 == 0)
+        std::cout << "Processed " << count << " correlation values. Lambda gradients: " << lambda1_grad << " and " << lambda2_grad << "\n";
     }
 
-    if (count % 1000000 == 0)
-      std::cout << "Processed " << count << " correlation values.\n";
   }
 
   delete[] i_gradient;
@@ -95,8 +103,7 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
   int count = 0;
   for (int m1 = 0; m1 < MAX_MOVIES; m1++) {
     for (int m2 = m1; m2 < MAX_MOVIES; m2++) {
-      if (std::isnan(corr_matrix[m1 * MAX_MOVIES + m2]))
-        continue;
+      if (!has_correlation(corr_matrix, m1, m2)) continue;
 
       float error;
       float pred = 0;
@@ -107,7 +114,7 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
       total_error += error * error;
       count++;
 
-      if (count % 1000000 == 0)
+      if (count % 15000000 == 0)
         std::cout << "Error over " << count << " correlation values: " << sqrt(total_error / count) << std::endl;
     }
   }
@@ -183,6 +190,9 @@ void calc_predictions(float *factor_matrix, float *user_prefs, int num_factors, 
     for (int f = 0; f < num_factors; f++)
       pred += factor_matrix[movie_id * num_factors + f] * user_prefs[user_id * num_factors + f];
     pred += b->get_baseline(user_id, movie_id);
+
+    if (pred > 5) pred = 5;
+    if (pred < 1) pred = 1;	 
 
     out << pred << std::endl;
   }
