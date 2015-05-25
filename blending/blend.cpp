@@ -38,14 +38,10 @@ float blend_new_estimates(float *old_estimates, float *new_estimates, DataAccess
   return numerator / denominator;
 }
 
-void calc_blend_weights(int num_files, char *blend_files[], char *probe_file, int num_bins, char *train_file, float *weights) {
-  DataAccessor train_data, probe_data;
+void calc_blend_weights(int num_files, char **blend_files, DataAccessor *probe_data, int num_bins, DataAccessor *train_data, float *weights) {
   int probe_size;
 
-  train_data.load_data(train_file);
-  probe_data.load_data(probe_file);
-
-  probe_size = probe_data.get_num_entries();
+  probe_size = probe_data->get_num_entries();
 
   float *old_estimates = new float[probe_size];
   float *new_estimates = new float[probe_size];
@@ -55,7 +51,7 @@ void calc_blend_weights(int num_files, char *blend_files[], char *probe_file, in
   for (int i = 0; i < num_files; i++) {
     load_estimates(new_estimates, blend_files[i], probe_size);
 
-    float old_weight = blend_new_estimates(old_estimates, new_estimates, &probe_data);
+    float old_weight = blend_new_estimates(old_estimates, new_estimates, probe_data);
 
     for (int j = 0; j < i; j++)
       weights[j] *= old_weight;
@@ -66,34 +62,74 @@ void calc_blend_weights(int num_files, char *blend_files[], char *probe_file, in
   delete[] new_estimates;
 }
 
+void perform_blend(int num_files, char **blend_files, float *weights, DataAccessor *qual_data, int num_bins, char *output_file) {
+  std::ifstream *ins = new std::ifstream[num_files];
+  std::ofstream out;
+
+  for (int i = 0; i < num_files; i++)
+    ins[i].open(blend_files[i]);
+  out.open(output_file);
+
+  for (int idx = 0; idx < qual_data->get_num_entries(); idx++) {
+    float r = 0;
+
+    float val;
+    for (int i = 0; i < num_files; i++) {
+      ins[i] >> val;
+      r += val * weights[i];
+    }
+
+    out << r << std::endl;
+  }
+
+  for (int i = 0; i < num_files; i++)
+    ins[i].close();
+  out.close();
+}
+
 
 int main(int argc, char *argv[]) {
-  char *train_file, *probe_file;
-  char **blend_files;
   int num_bins;
-  int num_files;
+  char *output_file;
+  char *train_entry_file, *probe_entry_file, *qual_entry_file;
+  char **probe_files;
+  char **qual_files;
+  int num_blends;
   
-  if (argc < 6) {
-    std::cout << "Usage: blend <#-bins> <train-entries> <probe-entries> <file1> <file2> [<file3> ...]\n";
+  if (argc < 8) {
+    std::cout << "Usage: blend <#-bins> <output-file> <train-entries> <probe-entries> <qual-entries> <probe_1> [<probe_2> ...] <qual_1> [<qual_2> ...]\n";
     exit(1);
   }
+  num_blends = (argc - 6) / 2;
   num_bins = atoi(argv[1]);
-  train_file = argv[2];
-  probe_file = argv[3];
-  blend_files = argv + 4;
-  num_files = argc - 4;
+  output_file = argv[2];
+  train_entry_file = argv[3];
+  probe_entry_file = argv[4];
+  qual_entry_file = argv[5];
+  probe_files = argv + 6;
+  qual_files = probe_files + num_blends;
 
-  std::cout << "Blending " << num_files << " files with the following parameters:\n"
-      << "\tTraining data file (for binning): " << train_file << std::endl
-      << "\tProbe data file (for blending): " << probe_file << std::endl
+  std::cout << "Blending " << num_blends << " files with the following parameters:\n"
+      << "\tOutput file: " << output_file << std::endl
+      << "\tTraining data file (for binning): " << train_entry_file << std::endl
+      << "\tProbe data file (for calculating blend): " << probe_entry_file << std::endl
+      << "\tQual data file (for performing blend): " << qual_entry_file << std::endl
       << "\tNumber of bins: " << num_bins << std::endl;
 
-  float *weights = new float[num_files];
-  calc_blend_weights(num_files, blend_files, probe_file, num_bins, train_file, weights);
+  DataAccessor train_data, probe_data, qual_data;
+
+  train_data.load_data(train_entry_file);
+  probe_data.load_data(probe_entry_file);
+  qual_data.load_data(qual_entry_file);
+
+  float *weights = new float[num_blends];
+  calc_blend_weights(num_blends, probe_files, &probe_data, num_bins, &train_data, weights);
 
   std::cout << "Calculated weights: \n";
-  for (int i = 0; i < num_files; i++)
-    std::cout << weights[i] << "\t" << blend_files[i] << std::endl;
+  for (int i = 0; i < num_blends; i++)
+    std::cout << weights[i] << "\t" << probe_files[i] << std::endl;
+
+  perform_blend(num_blends, qual_files, weights, &qual_data, num_bins, output_file);
 
   delete[] weights;
 
