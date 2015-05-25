@@ -130,6 +130,9 @@ void perform_blend(int num_files, char **blend_files, DataAccessor *qual_data, f
       r += val * weights[i];
     }
 
+    if (r > 5) r = 4.99;
+    if (r < 1) r = 1.01;
+
     out << r << std::endl;
   }
 
