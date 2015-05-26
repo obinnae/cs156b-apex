@@ -7,6 +7,7 @@
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
+<<<<<<< Updated upstream
 bool has_correlation(float *corr_matrix, int m1, int m2) {
   int idx = m1 * MAX_MOVIES + m2;
   float c = corr_matrix[idx];
@@ -14,6 +15,12 @@ bool has_correlation(float *corr_matrix, int m1, int m2) {
   return (!std::isnan(c) && !std::isinf(c));
 }
 
+float dot_product(float *v1, float *v2, int n) {
+  float dp = 0;
+  for (int i = 0; i < n; i++)
+    dp += v1[i] * v2[i];
+  return dp;
+}
 
 void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
   for (int m = 0; m < MAX_MOVIES; m++) {
@@ -30,7 +37,8 @@ void initialize_matrix(float *factor_matrix, float *lambdas, int num_factors) {
       row[f] /= norm;
     }
 
-    lambdas[m] = (static_cast<float>(rand()) / RAND_MAX * 2 - 1) * 0.001;
+    //lambdas[m] = (static_cast<float>(rand()) / RAND_MAX * 2 - 1) * 0.001;
+    lambdas[m] = 1;
   }
 }
 
@@ -48,20 +56,20 @@ float calc_lambda_gradient(float *factor_matrix, int num_factors, int i) {
 }
 
 void calc_factor_gradient(float *corr_matrix, float *factor_matrix, float *lambdas, int num_factors, int i, int j, float *i_gradient, float *j_gradient) {
-  float error;
+  float error, i_norm, j_norm;
   float *i_row, *j_row;
 
   i_row = factor_matrix + i * num_factors;
   j_row = factor_matrix + j * num_factors;
 
   // Calculate difference between correlation value and the prediction
-  error = corr_matrix[i * MAX_MOVIES + j];
-  for (int f = 0; f < num_factors; f++)
-    error -= i_row[f] * j_row[f];
+  error = corr_matrix[i * MAX_MOVIES + j] - dot_product(i_row, j_row, num_factors);
+  i_norm = dot_product(i_row, i_row, num_factors);
+  j_norm = dot_product(j_row, j_row, num_factors);
 
   for (int f = 0; f < num_factors; f++) {
-    i_gradient[f] = lambdas[i] * i_row[f] - error * j_row[f];
-    j_gradient[f] = lambdas[j] * j_row[f] - error * i_row[f];
+    i_gradient[f] = lambdas[i] * (i_norm - 1) * i_row[f] - error * j_row[f];
+    j_gradient[f] = lambdas[j] * (j_norm - 1) * j_row[f] - error * i_row[f];
   }
 }
 
@@ -82,8 +90,8 @@ void run_epoch(float *corr_matrix, float *factor_matrix, float *lambdas, int num
         factor_matrix[m1 * num_factors + f] -= lrate * i_gradient[f];
         factor_matrix[m2 * num_factors + f] -= lrate * j_gradient[f];
       }
-      lambdas[m1] -= lrate * lambda1_grad;
-      lambdas[m2] -= lrate * lambda2_grad;
+      //lambdas[m1] -= lrate * lambda1_grad;
+      //lambdas[m2] -= lrate * lambda2_grad;
 
       count++;
 
