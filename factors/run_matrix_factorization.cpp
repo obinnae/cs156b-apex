@@ -81,6 +81,7 @@ void update_latent_factors(float ** U, float ** V, float ** w, int ** r, DataAcc
   time_t t1, t2; // time each epoch for informational purposes
 
   //Loop for the chosen number of epochs
+  t1 = time(NULL);
 
   for (int k = 0; k < d->get_num_entries(); k++) {
 
