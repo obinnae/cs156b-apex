@@ -1,6 +1,4 @@
 #include "sgd.h"
-#include "../DataAccessor/data_accessor.h"
-#include "../baseline/baseline.h"
 
 // DataAccessor d = new DataAccessor();
 
@@ -9,7 +7,7 @@ void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
-                 Baseline *b,
+                 Bias *b,
                  int factor_length,
                  float lambda,
                  float *u_gradient,
@@ -24,7 +22,7 @@ void gradient(const float * const * u,
     int v_index = d->extract_movie_id(e);
     float rating = (float) d->extract_rating(e);
 
-    float baseline_rating = (float) b->get_baseline(u_index, v_index);
+    float baseline_rating = (float) b->get_baseline(v_index, u_index);
 
         /*
          * Loop that follows calculates the error arising

@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include "../baseline/baseline.h"
+#include "../baseline/bias.h"
 #include "../DataAccessor/data_accessor.h"
 
 
@@ -12,7 +13,7 @@ void gradient(const float * const * u,
                  const float * const * v, 
                  entry_t e,
                  const DataAccessor * d,
-                 Baseline *b,
+                 Bias *b,
                  const int factor_length,
                  float lambda,
                  float *u_gradient,
