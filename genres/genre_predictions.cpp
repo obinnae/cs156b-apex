@@ -7,7 +7,6 @@
 #include "../baseline/baseline.h"
 #include "../DataAccessor/data_accessor.h"
 
-<<<<<<< Updated upstream
 bool has_correlation(float *corr_matrix, int m1, int m2) {
   int idx = m1 * MAX_MOVIES + m2;
   float c = corr_matrix[idx];
