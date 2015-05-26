@@ -131,11 +131,12 @@ float calc_error(float *corr_matrix, float *factor_matrix, int num_factors) {
   return total_error;
 }
 
-void do_matrix_factorization(float *corr_matrix, float *factor_matrix, int num_factors, float lrate, int num_epochs) {
+void do_matrix_factorization(float *corr_matrix, float *factor_matrix, int num_factors, float lambda, float lrate, int num_epochs) {
   float *lambdas = new float[MAX_MOVIES];
 
   std::cout << "Initializing factor matrix...\n";
   initialize_matrix(factor_matrix, lambdas, num_factors);
+  for (int i = 0; i < MAX_MOVIES; i++) lambdas[i] = lambda; // we don't want random lambdas anymore...
 
   std::cout << "Performing matrix factorization\n";
   for (int e = 0; e < num_epochs; e++) {
@@ -220,11 +221,11 @@ void read_correlation_file(char *file, float *correlation_matrix) {
   in.close();
 }
 
-void genre_predictions(float *corr_matrix, int num_factors, float lrate, int num_epochs, DataAccessor *train_data, DataAccessor *probe_data, DataAccessor *qual_data, Baseline *b, char *probe_out, char *qual_out) {
+void genre_predictions(float *corr_matrix, int num_factors, float lambda, float lrate, int num_epochs, DataAccessor *train_data, DataAccessor *probe_data, DataAccessor *qual_data, Baseline *b, char *probe_out, char *qual_out) {
   float *factor_matrix = new float[MAX_MOVIES * num_factors];
   float *user_prefs = new float[MAX_USERS * num_factors];
 
-  do_matrix_factorization(corr_matrix, factor_matrix, num_factors, lrate, num_epochs);
+  do_matrix_factorization(corr_matrix, factor_matrix, num_factors, lambda, lrate, num_epochs);
 
   std::cout << "Calculating user preferences\n";
   calc_user_prefs(factor_matrix, user_prefs, num_factors, train_data, b);
@@ -242,13 +243,14 @@ void genre_predictions(float *corr_matrix, int num_factors, float lrate, int num
 int main(int argc, char *argv[]) {
   char *correlation_file;
   int num_factors;
+  float lambda;
   float lrate;
   int num_epochs;
   char *train_infile, *probe_infile, *qual_infile;
   char *probe_outfile, *qual_outfile;
   
-  if (argc != 10) {
-    std::cout << "Usage: genre_predictions <correlation-file> <num-factors> <lrate> <num-epochs> <train-data> <probe-data> <qual-data> <probe-output> <qual_output>\n";
+  if (argc != 11) {
+    std::cout << "Usage: genre_predictions <correlation-file> <num-factors> <lambda> <lrate> <num-epochs> <train-data> <probe-data> <qual-data> <probe-output> <qual_output>\n";
     /*
      * Modified usage message to clarify the extra command line arg
      * Also renamed old data-file arg to differentiate between train-data and probe-data
@@ -257,17 +259,19 @@ int main(int argc, char *argv[]) {
   }
   correlation_file = argv[1];
   num_factors = atoi(argv[2]);
-  lrate = atof(argv[3]);
-  num_epochs = atoi(argv[4]);
-  train_infile = argv[5];
-  probe_infile = argv[6];
-  qual_infile = argv[7];
-  probe_outfile = argv[8];
-  qual_outfile = argv[9];
+  lambda = atof(argv[3]);
+  lrate = atof(argv[4]);
+  num_epochs = atoi(argv[5]);
+  train_infile = argv[6];
+  probe_infile = argv[7];
+  qual_infile = argv[8];
+  probe_outfile = argv[9];
+  qual_outfile = argv[10];
 
   std::cout << "Factoring movie correlation matrix:\n"
       << "\tData file: " << correlation_file << std::endl
       << "\tNumber of factors: " << num_factors << std::endl
+      << "\tLambda: " << lambda << std::endl
       << "\tLearning rate: " << lrate << std::endl
       << "\tNumber of epochs: " << num_epochs << std::endl
       << "\tTrain data file: " << train_infile << std::endl
@@ -297,7 +301,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Loaded!\n\n";
 
   std::cout << "Beginning genre prediction calculations\n";
-  genre_predictions(correlation_matrix, num_factors, lrate, num_epochs, &train_data, &probe_data, &qual_data, &b, probe_outfile, qual_outfile);
+  genre_predictions(correlation_matrix, num_factors, lambda, lrate, num_epochs, &train_data, &probe_data, &qual_data, &b, probe_outfile, qual_outfile);
 
   delete[] correlation_matrix;
 
